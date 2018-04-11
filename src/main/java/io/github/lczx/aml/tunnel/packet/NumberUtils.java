@@ -16,14 +16,20 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import java.nio.ByteBuffer;
+public final class NumberUtils {
 
-public final class LayerFactory {
+    private NumberUtils() { }
 
-    private LayerFactory() { }
+    public static short asUnsigned(byte value) {
+        return (short) (value & 0xFF);
+    }
 
-    public static ProtocolLayer getIPLayer(ByteBuffer backingBuffer) {
-        return new IPv4Layer(backingBuffer, 0);
+    public static int asUnsigned(short value) {
+        return value & 0xFFFF;
+    }
+
+    public static long asUnsigned(int value) {
+        return value & 0xFFFFFFFFL;
     }
 
 }
