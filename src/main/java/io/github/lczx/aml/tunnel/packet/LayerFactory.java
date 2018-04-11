@@ -16,14 +16,69 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import android.util.Log;
+
 import java.nio.ByteBuffer;
 
-public final class LayerFactory {
+final class LayerFactory {
+
+    private static final String TAG = "LayerFactory";
+
+    public static final int LAYER_DATA_LINK = 2;
+    public static final int LAYER_NETWORK = 3;
+    public static final int LAYER_TRANSPORT = 4;
+
+    private static final LayerDetector networkLayerDetector = new NetworkLayerDetector();
+    private static final LayerDetector transportLayerDetector = new TransportLayerDetector();
 
     private LayerFactory() { }
 
-    public static ProtocolLayer getIPLayer(ByteBuffer backingBuffer) {
-        return new IPv4Layer(backingBuffer, 0);
+    static LayerDetector getFactory(int type) {
+        switch (type) {
+            case LAYER_NETWORK:
+                return networkLayerDetector;
+            case LAYER_TRANSPORT:
+                return transportLayerDetector;
+            default:
+                throw new IllegalArgumentException("No layer factory implementation found for the given type");
+        }
+    }
+
+    private static class NetworkLayerDetector implements LayerDetector {
+        @Override
+        public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
+            if ((buffer.get(offset) & 0xF0) == 0x40)
+                return new IPv4Layer(buffer, offset);
+            throw new LayerDetectException("Cannot determine network layer type");
+        }
+    }
+
+    private static class TransportLayerDetector implements LayerDetector {
+        @Override
+        public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
+            short protoId = ((IPv4Layer) parent).getProtocolId();
+            switch (protoId) {
+                case IPv4Layer.PROTOCOL_TCP:
+                    return null; // TODO: Implement
+                case IPv4Layer.PROTOCOL_UDP:
+                    return new UdpLayer(buffer, offset);
+                case IPv4Layer.PROTOCOL_ICMP:
+                    return null; // TODO: Implement
+                default:
+                    Log.w(TAG, "Unknown IPv4 protocol ID (" + protoId + "), treating as data");
+                    return null;
+            }
+        }
+    }
+
+    public interface LayerDetector {
+        ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset);
+    }
+
+    private static class LayerDetectException extends RuntimeException {
+        private LayerDetectException(String message) {
+            super(message);
+        }
     }
 
 }

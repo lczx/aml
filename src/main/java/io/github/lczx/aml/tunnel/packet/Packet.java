@@ -33,7 +33,8 @@ public class Packet {
 
     public ProtocolLayer getFirstLayer() {
         if (firstLayer == null)
-            firstLayer = LayerFactory.getIPLayer(backingBuffer);
+            firstLayer = LayerFactory.getFactory(LayerFactory.LAYER_NETWORK)
+                    .detectLayer(null, backingBuffer, 0);
         return firstLayer;
     }
 

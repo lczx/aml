@@ -23,6 +23,11 @@ import java.nio.ByteBuffer;
 
 public class IPv4Layer implements ProtocolLayer {
 
+    // IANA-assigned IP protocol numbers, unsigned
+    public static final int PROTOCOL_ICMP = 1;
+    public static final int PROTOCOL_TCP = 6;
+    public static final int PROTOCOL_UDP = 17;
+
     // Intra-header field offsets (in bytes)
     static final int IDX_BYTE_VERSION_AND_IHL = 0;              //   0 :   3  (4b), version
     //                                                          //   4 :   7  (4b), internet header length
@@ -40,6 +45,7 @@ public class IPv4Layer implements ProtocolLayer {
 
     private final ByteBuffer backingBuffer;
     private final int offset;
+    private ProtocolLayer nextLayer;
 
     public IPv4Layer(ByteBuffer backingBuffer, int offset) {
         this.backingBuffer = backingBuffer;
@@ -48,7 +54,10 @@ public class IPv4Layer implements ProtocolLayer {
 
     @Override
     public ProtocolLayer getNextLayer() {
-        return null;
+        if (nextLayer == null)
+            nextLayer = LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT)
+                    .detectLayer(this, backingBuffer, offset + getHeaderSize());
+        return nextLayer;
     }
 
     @Override
