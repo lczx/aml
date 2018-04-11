@@ -124,10 +124,10 @@ public class IPv4Layer implements ProtocolLayer {
     }
 
     public byte[] getOptions() {
-        int optionsSize = getHeaderSize() - IDX_BLOB_OPTIONS;
+        final int optionsSize = getHeaderSize() - IDX_BLOB_OPTIONS;
         if (optionsSize == 0) return null;
 
-        byte[] options = new byte[optionsSize];
+        final byte[] options = new byte[optionsSize];
         ((ByteBuffer) backingBuffer.duplicate().position(offset + IDX_BLOB_OPTIONS)).get(options);
         return options;
     }

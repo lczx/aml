@@ -60,7 +60,7 @@ final class LayerFactory {
             short protoId = ((IPv4Layer) parent).getProtocolId();
             switch (protoId) {
                 case IPv4Layer.PROTOCOL_TCP:
-                    return null; // TODO: Implement
+                    return new TcpLayer(parent, buffer, offset); // TODO: Implement
                 case IPv4Layer.PROTOCOL_UDP:
                     return new UdpLayer(buffer, offset);
                 case IPv4Layer.PROTOCOL_ICMP:
