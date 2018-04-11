@@ -17,20 +17,13 @@
 package io.github.lczx.aml.tunnel.packet;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
-public interface Packet {
+public final class Packets {
 
-    ProtocolLayer getFirstLayer();
+    private Packets() { }
 
-    <T extends ProtocolLayer> T getLayer(Class<T> clazz);
-
-    List<ProtocolLayer> getLayers();
-
-    ByteBuffer getBufferView();
-
-    Packet attachBuffer(ByteBuffer buffer);
-
-    ByteBuffer detachBuffer();
+    public static Packet wrapBuffer(ByteBuffer buffer) {
+        return new PacketImpl(buffer);
+    }
 
 }
