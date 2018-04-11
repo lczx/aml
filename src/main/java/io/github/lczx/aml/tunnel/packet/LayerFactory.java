@@ -57,7 +57,7 @@ final class LayerFactory {
     private static class TransportLayerDetector implements LayerDetector {
         @Override
         public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
-            short protoId = ((IPv4Layer) parent).getProtocolId();
+            final short protoId = ((IPv4Layer) parent).getProtocolId();
             switch (protoId) {
                 case IPv4Layer.PROTOCOL_TCP:
                     return new TcpLayer(parent, buffer, offset);

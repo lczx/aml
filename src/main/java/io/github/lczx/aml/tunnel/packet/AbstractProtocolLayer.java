@@ -66,7 +66,7 @@ public abstract class AbstractProtocolLayer implements ProtocolLayer {
     protected abstract ProtocolLayer buildNextLayer(int nextOffset);
 
     private ByteBuffer makeBufferView(int offset, int size) {
-        ByteBuffer view = backingBuffer.duplicate();
+        final ByteBuffer view = backingBuffer.duplicate();
         view.position(offset);
         view.limit(offset + size);
         return view.slice();

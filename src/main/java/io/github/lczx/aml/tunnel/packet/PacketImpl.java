@@ -50,7 +50,7 @@ class PacketImpl implements Packet {
 
     @Override
     public List<ProtocolLayer> getLayers() {
-        List<ProtocolLayer> list = new LinkedList<>();
+        final List<ProtocolLayer> list = new LinkedList<>();
         ProtocolLayer nextLayer = getFirstLayer();
         list.add(nextLayer);
 
@@ -79,7 +79,7 @@ class PacketImpl implements Packet {
     public ByteBuffer detachBuffer() {
         if (backingBuffer == null)
             throw new IllegalStateException("No buffer attached to this packet");
-        ByteBuffer ret = backingBuffer;
+        final ByteBuffer ret = backingBuffer;
         backingBuffer = null;
         firstLayer = null;
         return ret;

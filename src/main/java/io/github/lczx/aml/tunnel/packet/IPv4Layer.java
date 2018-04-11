@@ -120,7 +120,7 @@ public class IPv4Layer extends AbstractProtocolLayer {
     }
 
     private Inet4Address readIPv4Address(int index) {
-        byte[] addressBytes = new byte[4];
+        final byte[] addressBytes = new byte[4];
         ((ByteBuffer) backingBuffer.duplicate().position(index)).get(addressBytes);
         try {
             return (Inet4Address) InetAddress.getByAddress(addressBytes);

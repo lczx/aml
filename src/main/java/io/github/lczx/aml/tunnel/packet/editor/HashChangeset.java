@@ -66,12 +66,12 @@ public class HashChangeset extends LayerChangeset {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        Iterator<Map.Entry<Integer, Object>> i = changeset.entrySet().iterator();
+        final StringBuilder sb = new StringBuilder();
+        final Iterator<Map.Entry<Integer, Object>> i = changeset.entrySet().iterator();
         while (i.hasNext()) {
-            Map.Entry<Integer, Object> e = i.next();
+            final Map.Entry<Integer, Object> e = i.next();
             sb.append(e.getKey());
-            Object v = e.getValue();
+            final Object v = e.getValue();
             if (v instanceof Byte)
                 sb.append("B:").append(NumberUtils.asUnsigned((byte) v));
             else if (v instanceof Short)
@@ -97,7 +97,7 @@ public class HashChangeset extends LayerChangeset {
 
         @Override
         public Entry next() {
-            Map.Entry<Integer, Object> e = mapIterator.next();
+            final Map.Entry<Integer, Object> e = mapIterator.next();
             return new Entry(e.getKey(), e.getValue());
         }
     }
