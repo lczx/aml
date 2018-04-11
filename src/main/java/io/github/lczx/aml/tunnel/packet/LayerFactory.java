@@ -49,7 +49,7 @@ final class LayerFactory {
         @Override
         public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
             if ((buffer.get(offset) & 0xF0) == 0x40)
-                return new IPv4Layer(buffer, offset);
+                return new IPv4Layer(parent, buffer, offset);
             throw new LayerDetectException("Cannot determine network layer type");
         }
     }
@@ -60,11 +60,14 @@ final class LayerFactory {
             short protoId = ((IPv4Layer) parent).getProtocolId();
             switch (protoId) {
                 case IPv4Layer.PROTOCOL_TCP:
-                    return new TcpLayer(parent, buffer, offset); // TODO: Implement
+                    return new TcpLayer(parent, buffer, offset);
                 case IPv4Layer.PROTOCOL_UDP:
-                    return new UdpLayer(buffer, offset);
+                    return new UdpLayer(parent, buffer, offset);
                 case IPv4Layer.PROTOCOL_ICMP:
-                    return null; // TODO: Implement
+                    // TODO: Consider implementing ICMP
+                    LOG.info("Requested construction for an ICMP layer " +
+                            "(which is not yet implemented), treating as data");
+                    return null;
                 default:
                     LOG.warn("Unknown IPv4 protocol ID ({}), treating as data", protoId);
                     return null;

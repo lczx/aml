@@ -18,7 +18,7 @@ package io.github.lczx.aml.tunnel.packet;
 
 import java.nio.ByteBuffer;
 
-public class TcpLayer implements ProtocolLayer {
+public class TcpLayer extends AbstractProtocolLayer {
 
     // Intra-header field offsets (in bytes)
     static final int IDX_WORD_SOURCE_PORT = 0;                  // RW   0 :  15 (16b), source port
@@ -34,19 +34,8 @@ public class TcpLayer implements ProtocolLayer {
     static final int IDX_WORD_URGENT_POINTER = 18;              // RW 144 : 159 (16b), urgent pointer
     static final int IDX_BLOB_OPTIONS = 20;                     // RW -- up to data offset, optionless header size --
 
-    private final ProtocolLayer parentLayer;
-    private final ByteBuffer backingBuffer;
-    private final int offset;
-
     public TcpLayer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
-        this.parentLayer = parentLayer;
-        this.backingBuffer = backingBuffer;
-        this.offset = offset;
-    }
-
-    @Override
-    public ProtocolLayer getNextLayer() {
-        return null;
+        super(parentLayer, backingBuffer, offset);
     }
 
     @Override
@@ -55,13 +44,8 @@ public class TcpLayer implements ProtocolLayer {
     }
 
     @Override
-    public int getPayloadSize() {
-        return getTotalSize() - getHeaderSize();
-    }
-
-    @Override
     public int getTotalSize() {
-        return parentLayer.getPayloadSize();
+        return getParentLayer().getPayloadSize();
     }
 
     public int getSourcePort() {
@@ -108,6 +92,11 @@ public class TcpLayer implements ProtocolLayer {
         final byte[] options = new byte[optionsSize];
         ((ByteBuffer) backingBuffer.duplicate().position(offset + IDX_BLOB_OPTIONS)).get(options);
         return options;
+    }
+
+    @Override
+    protected ProtocolLayer buildNextLayer(int nextOffset) {
+        return null;
     }
 
 }

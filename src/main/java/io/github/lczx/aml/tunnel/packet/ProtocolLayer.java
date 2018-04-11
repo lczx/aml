@@ -18,7 +18,11 @@ package io.github.lczx.aml.tunnel.packet;
 
 public interface ProtocolLayer {
 
+    ProtocolLayer getParentLayer();
+
     ProtocolLayer getNextLayer();
+
+    int getBufferOffset();
 
     int getHeaderSize();
 

@@ -21,7 +21,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
-public class IPv4Layer implements ProtocolLayer {
+public class IPv4Layer extends AbstractProtocolLayer {
 
     // IANA-assigned IP protocol numbers, unsigned
     public static final int PROTOCOL_ICMP = 1;
@@ -43,31 +43,13 @@ public class IPv4Layer implements ProtocolLayer {
     static final int IDX_DWORD_DESTINATION_ADDRESS = 16;        // 128 : 159 (32b), destination address
     static final int IDX_BLOB_OPTIONS = 20;                     // -- up to IHL, also optionless header size --
 
-    private final ByteBuffer backingBuffer;
-    private final int offset;
-    private ProtocolLayer nextLayer;
-
-    public IPv4Layer(ByteBuffer backingBuffer, int offset) {
-        this.backingBuffer = backingBuffer;
-        this.offset = offset;
-    }
-
-    @Override
-    public ProtocolLayer getNextLayer() {
-        if (nextLayer == null)
-            nextLayer = LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT)
-                    .detectLayer(this, backingBuffer, offset + getHeaderSize());
-        return nextLayer;
+    public IPv4Layer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
+        super(parentLayer, backingBuffer, offset);
     }
 
     @Override
     public int getHeaderSize() {
         return getIHL() << 2; // IHL is the number of dwords (4B each), we want bytes
-    }
-
-    @Override
-    public int getPayloadSize() {
-        return getTotalSize() - getHeaderSize();
     }
 
     @Override
@@ -130,6 +112,11 @@ public class IPv4Layer implements ProtocolLayer {
         final byte[] options = new byte[optionsSize];
         ((ByteBuffer) backingBuffer.duplicate().position(offset + IDX_BLOB_OPTIONS)).get(options);
         return options;
+    }
+
+    @Override
+    protected ProtocolLayer buildNextLayer(int nextOffset) {
+        return LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
     }
 
     private Inet4Address readIPv4Address(int index) {
