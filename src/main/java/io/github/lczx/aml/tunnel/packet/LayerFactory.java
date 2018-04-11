@@ -16,13 +16,14 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import android.util.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 
 final class LayerFactory {
 
-    private static final String TAG = "LayerFactory";
+    private static final Logger LOG = LoggerFactory.getLogger(LayerFactory.class);
 
     public static final int LAYER_DATA_LINK = 2;
     public static final int LAYER_NETWORK = 3;
@@ -65,7 +66,7 @@ final class LayerFactory {
                 case IPv4Layer.PROTOCOL_ICMP:
                     return null; // TODO: Implement
                 default:
-                    Log.w(TAG, "Unknown IPv4 protocol ID (" + protoId + "), treating as data");
+                    LOG.warn("Unknown IPv4 protocol ID ({}), treating as data", protoId);
                     return null;
             }
         }
