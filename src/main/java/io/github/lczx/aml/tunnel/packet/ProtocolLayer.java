@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import java.nio.ByteBuffer;
+
 public interface ProtocolLayer {
 
     ProtocolLayer getParentLayer();
@@ -29,5 +31,9 @@ public interface ProtocolLayer {
     int getPayloadSize();
 
     int getTotalSize(); // TODO: Redundant, I know
+
+    ByteBuffer getBufferView();
+
+    ByteBuffer getPayloadBufferView();
 
 }

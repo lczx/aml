@@ -53,6 +53,23 @@ public abstract class AbstractProtocolLayer implements ProtocolLayer {
         return getTotalSize() - getHeaderSize();
     }
 
+    @Override
+    public ByteBuffer getBufferView() {
+        return makeBufferView(offset, getTotalSize()).asReadOnlyBuffer();
+    }
+
+    @Override
+    public ByteBuffer getPayloadBufferView() {
+        return makeBufferView(offset + getHeaderSize(), getPayloadSize()).asReadOnlyBuffer();
+    }
+
     protected abstract ProtocolLayer buildNextLayer(int nextOffset);
+
+    private ByteBuffer makeBufferView(int offset, int size) {
+        ByteBuffer view = backingBuffer.duplicate();
+        view.position(offset);
+        view.limit(offset + size);
+        return view.slice();
+    }
 
 }

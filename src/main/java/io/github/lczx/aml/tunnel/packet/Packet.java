@@ -56,4 +56,8 @@ public class Packet {
         return list;
     }
 
+    public ByteBuffer getBufferView() {
+        return backingBuffer.asReadOnlyBuffer();
+    }
+
 }
