@@ -19,19 +19,19 @@ package io.github.lczx.aml.tunnel.packet;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 
 public class Packet {
 
-    private final ByteBuffer backingBuffer;
+    private ByteBuffer backingBuffer;
     private ProtocolLayer firstLayer;
 
     public Packet(ByteBuffer buffer) {
-        Objects.requireNonNull(buffer, "Buffer must not be null");
-        this.backingBuffer = buffer;
+        attachBuffer(buffer);
     }
 
     public ProtocolLayer getFirstLayer() {
+        if (backingBuffer == null)
+            throw new IllegalStateException("Cannot retrieve packet layers, no buffer attached");
         if (firstLayer == null)
             firstLayer = LayerFactory.getFactory(LayerFactory.LAYER_NETWORK)
                     .detectLayer(null, backingBuffer, 0);
@@ -57,7 +57,26 @@ public class Packet {
     }
 
     public ByteBuffer getBufferView() {
+        if (backingBuffer == null)
+            throw new IllegalStateException("No buffer attached to this packet");
         return backingBuffer.asReadOnlyBuffer();
+    }
+
+    public Packet attachBuffer(ByteBuffer buffer) {
+        if (backingBuffer != null)
+            throw new IllegalStateException("Packet already attached to another buffer");
+        if (buffer != null) buffer.rewind();
+        this.backingBuffer = buffer;
+        return this;
+    }
+
+    public ByteBuffer detachBuffer() {
+        if (backingBuffer == null)
+            throw new IllegalStateException("No buffer attached to this packet");
+        ByteBuffer ret = backingBuffer;
+        backingBuffer = null;
+        firstLayer = null;
+        return ret;
     }
 
 }
