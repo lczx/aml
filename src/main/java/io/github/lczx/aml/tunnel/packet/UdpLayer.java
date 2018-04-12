@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
  */
 public class UdpLayer extends AbstractProtocolLayer<UdpLayerEditor> implements UdpHeader {
 
-    private static final int HEADER_SIZE = 8;
+    public static final int HEADER_SIZE = 8;
 
     // Intra-header field offsets (in bytes)
     static final int IDX_WORD_SOURCE_PORT = 0;          //    0 :  15 (16b), source port

@@ -16,7 +16,6 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import io.github.lczx.aml.tunnel.packet.buffer.ByteBufferPool;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,22 +24,21 @@ import org.junit.runners.Parameterized;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
+import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.RANDOM;
+import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.checkBufferSlices;
+import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.dumpBuffer;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class IPv4LayerTest {
 
-    private static final Random RANDOM = ThreadLocalRandom.current();
-
     private final byte[] packetRaw;
     private final Packet packet;
     private final IPv4Layer ip;
 
-    public IPv4LayerTest(byte[] packetRaw) {
+    public IPv4LayerTest(final byte[] packetRaw) {
         this.packetRaw = packetRaw;
         this.packet = Packets.wrapBuffer(Packets.LAYER_NETWORK,
                 (ByteBuffer) Packets.createBuffer().put(packetRaw).flip());
@@ -95,7 +93,7 @@ public class IPv4LayerTest {
 
     @Test
     public void bufferSliceTest() {
-        checkBufferSlices(packet, packetRaw.length);
+        checkBufferSlices(packet, packetRaw.length, null);
     }
 
     @Test
@@ -106,7 +104,7 @@ public class IPv4LayerTest {
         final short oldChecksum = ip.getHeaderChecksum();
 
         // Put a small edit at the beginning of the payload
-        PayloadEditor payloadEditor = ip.payloadEditor();
+        final PayloadEditor payloadEditor = ip.payloadEditor();
         payloadEditor.buffer().put((byte) 0);
         payloadEditor.commit(); // Without flipping, we don't want to change the limit (and so the size of the payload)
 
@@ -125,7 +123,7 @@ public class IPv4LayerTest {
                 oldChecksum, newChecksum);
 
         // Check views consistency
-        checkBufferSlices(packet, packetRaw.length);
+        checkBufferSlices(packet, packetRaw.length, null);
     }
 
     @Test
@@ -166,36 +164,10 @@ public class IPv4LayerTest {
         assertArrayEquals(bufferAfterEdit, dumpBuffer(ip.getPayloadBufferView()));
 
         // Check views consistency
-        checkBufferSlices(packet, newTotalSize);
+        checkBufferSlices(packet, newTotalSize, null);
 
         // Check backing buffer limit (backing buffer pointers are preserved to the view without need to detach)
         assertEquals(newTotalSize, packet.getBufferView().limit());
-    }
-
-    private static byte[] dumpBuffer(ByteBuffer buffer) {
-        final byte[] ret = new byte[buffer.remaining()];
-        buffer.get(ret);
-        return ret;
-    }
-
-    private static void checkBufferSlices(final Packet packet, final int totalSize) {
-        final IPv4Layer ip = packet.getLayer(IPv4Layer.class);
-        final int ipHSiz = ip.getHeaderSize();
-
-        final ByteBuffer view = packet.getBufferView();
-        assertEquals(0, view.position());
-        assertEquals(totalSize, view.limit());
-        assertEquals(ByteBufferPool.BUFFER_SIZE, view.capacity());
-
-        final ByteBuffer layerView = ip.getBufferView();
-        assertEquals(0, layerView.position());
-        assertEquals(totalSize, layerView.limit());
-        assertEquals(totalSize, layerView.capacity());
-
-        final ByteBuffer payloadView = ip.getPayloadBufferView();
-        assertEquals(0, payloadView.position());
-        assertEquals(totalSize - ipHSiz, payloadView.limit());
-        assertEquals(totalSize - ipHSiz, payloadView.limit());
     }
 
 }
