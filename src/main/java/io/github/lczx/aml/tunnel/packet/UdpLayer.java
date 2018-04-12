@@ -16,14 +16,12 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
-
 import java.nio.ByteBuffer;
 
 /**
  * A {@link ProtocolLayer} representing the User Datagram Protocol.
  */
-public class UdpLayer extends AbstractProtocolLayer implements UdpHeader {
+public class UdpLayer extends AbstractProtocolLayer<UdpLayerEditor> implements UdpHeader {
 
     private static final int HEADER_SIZE = 8;
 
@@ -67,14 +65,18 @@ public class UdpLayer extends AbstractProtocolLayer implements UdpHeader {
         return backingBuffer.getShort(offset + IDX_WORD_CHECKSUM);
     }
 
+    public short calculateChecksum() {
+        return 0; // Checksum is optional for IPv4
+    }
+
     @Override
     protected ProtocolLayer<?> buildNextLayer(final int nextOffset) {
         return null;
     }
 
     @Override
-    protected LayerEditor buildEditor(final ByteBuffer bufferView) {
-        return null; // TODO: Implement
+    protected UdpLayerEditor buildEditor(final ByteBuffer bufferView) {
+        return new UdpLayerEditor(this, bufferView);
     }
 
     @Override
