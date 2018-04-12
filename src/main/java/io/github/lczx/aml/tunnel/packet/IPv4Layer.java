@@ -21,7 +21,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
-public class IPv4Layer extends AbstractProtocolLayer {
+public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
 
     // IANA-assigned IP protocol numbers, unsigned
     public static final int PROTOCOL_ICMP = 1;
@@ -117,6 +117,11 @@ public class IPv4Layer extends AbstractProtocolLayer {
     @Override
     protected ProtocolLayer buildNextLayer(int nextOffset) {
         return LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
+    }
+
+    @Override
+    protected IPv4LayerEditor buildEditor(ByteBuffer bufferView) {
+        return new IPv4LayerEditor(this, bufferView);
     }
 
     private Inet4Address readIPv4Address(int index) {

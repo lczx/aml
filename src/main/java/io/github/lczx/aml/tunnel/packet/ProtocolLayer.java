@@ -16,13 +16,15 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
+
 import java.nio.ByteBuffer;
 
-public interface ProtocolLayer {
+public interface ProtocolLayer<E extends LayerEditor> {
 
-    ProtocolLayer getParentLayer();
+    ProtocolLayer<?> getParentLayer();
 
-    ProtocolLayer getNextLayer();
+    ProtocolLayer<?> getNextLayer();
 
     int getBufferOffset();
 
@@ -31,6 +33,8 @@ public interface ProtocolLayer {
     int getPayloadSize();
 
     int getTotalSize(); // TODO: Redundant, I know
+
+    E editor();
 
     ByteBuffer getBufferView();
 

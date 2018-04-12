@@ -21,7 +21,7 @@ import java.util.List;
 
 public interface Packet {
 
-    ProtocolLayer getFirstLayer();
+    ProtocolLayer<?> getFirstLayer();
 
     <T extends ProtocolLayer> T getLayer(Class<T> clazz);
 

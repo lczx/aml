@@ -23,14 +23,14 @@ import java.util.List;
 class PacketImpl implements Packet {
 
     private ByteBuffer backingBuffer;
-    private ProtocolLayer firstLayer;
+    private ProtocolLayer<?> firstLayer;
 
     PacketImpl(ByteBuffer buffer) {
         attachBuffer(buffer);
     }
 
     @Override
-    public ProtocolLayer getFirstLayer() {
+    public ProtocolLayer<?> getFirstLayer() {
         if (backingBuffer == null)
             throw new IllegalStateException("Cannot retrieve packet layers, no buffer attached");
         if (firstLayer == null)

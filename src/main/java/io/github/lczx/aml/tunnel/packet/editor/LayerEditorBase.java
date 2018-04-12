@@ -35,7 +35,7 @@ public class LayerEditorBase<E extends LayerEditorBase> implements LayerEditor<E
     private static final Logger LOG = LoggerFactory.getLogger(LayerEditorBase.class);
 
     private final ByteBuffer targetBuffer;
-    private final LayerChangeset changeset = new HashChangeset();
+    protected final LayerChangeset changeset = new HashChangeset();
 
     protected LayerEditorBase(ByteBuffer targetBuffer) {
         this.targetBuffer = targetBuffer;

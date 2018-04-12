@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
+
 import java.nio.ByteBuffer;
 
 public class UdpLayer extends AbstractProtocolLayer {
@@ -61,6 +63,11 @@ public class UdpLayer extends AbstractProtocolLayer {
     @Override
     protected ProtocolLayer buildNextLayer(int nextOffset) {
         return null;
+    }
+
+    @Override
+    protected LayerEditor buildEditor(ByteBuffer bufferView) {
+        return null; // TODO: Implement
     }
 
 }

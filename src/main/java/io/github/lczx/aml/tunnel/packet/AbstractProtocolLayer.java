@@ -16,28 +16,30 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
+
 import java.nio.ByteBuffer;
 
-public abstract class AbstractProtocolLayer implements ProtocolLayer {
+public abstract class AbstractProtocolLayer<E extends LayerEditor> implements ProtocolLayer<E> {
 
     protected final ByteBuffer backingBuffer;
     protected final int offset;
-    private final ProtocolLayer parentLayer;
-    private ProtocolLayer nextLayer;
+    private final ProtocolLayer<?> parentLayer;
+    private ProtocolLayer<?> nextLayer;
 
-    public AbstractProtocolLayer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
+    public AbstractProtocolLayer(ProtocolLayer<?> parentLayer, ByteBuffer backingBuffer, int offset) {
         this.parentLayer = parentLayer;
         this.backingBuffer = backingBuffer;
         this.offset = offset;
     }
 
     @Override
-    public ProtocolLayer getParentLayer() {
+    public ProtocolLayer<?> getParentLayer() {
         return parentLayer;
     }
 
     @Override
-    public ProtocolLayer getNextLayer() {
+    public ProtocolLayer<?> getNextLayer() {
         if (nextLayer == null)
             nextLayer = buildNextLayer(offset + getHeaderSize());
         return nextLayer;
@@ -54,6 +56,12 @@ public abstract class AbstractProtocolLayer implements ProtocolLayer {
     }
 
     @Override
+    public E editor() {
+        // Let the editor operate on a view without limit of the buffer starting from this layer offset
+        return buildEditor(makeBufferView(offset, -1));
+    }
+
+    @Override
     public ByteBuffer getBufferView() {
         return makeBufferView(offset, getTotalSize()).asReadOnlyBuffer();
     }
@@ -63,12 +71,14 @@ public abstract class AbstractProtocolLayer implements ProtocolLayer {
         return makeBufferView(offset + getHeaderSize(), getPayloadSize()).asReadOnlyBuffer();
     }
 
-    protected abstract ProtocolLayer buildNextLayer(int nextOffset);
+    protected abstract ProtocolLayer<?> buildNextLayer(int nextOffset);
+
+    protected abstract E buildEditor(ByteBuffer bufferView);
 
     private ByteBuffer makeBufferView(int offset, int size) {
         final ByteBuffer view = backingBuffer.duplicate();
         view.position(offset);
-        view.limit(offset + size);
+        view.limit(size < 0 ? view.capacity() : offset + size);
         return view.slice();
     }
 
