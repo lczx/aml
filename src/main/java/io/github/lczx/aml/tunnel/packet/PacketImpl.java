@@ -94,4 +94,12 @@ class PacketImpl implements Packet {
         return ret;
     }
 
+    @Override
+    public String toString() {
+        return "PacketImpl{" +
+                "backingBuffer=" + backingBuffer +
+                ", layerChain=" + (backingBuffer != null ? getFirstLayer() : null) +
+                '}';
+    }
+
 }

@@ -30,7 +30,7 @@ public class UdpLayer extends AbstractProtocolLayer {
     static final int IDX_WORD_TOTAL_LENGTH = 4;         //   32 :  47 (16b), length
     static final int IDX_WORD_CHECKSUM = 6;             //   48 :  63 (16b), checksum
 
-    public UdpLayer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
+    public UdpLayer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         super(parentLayer, backingBuffer, offset);
     }
 
@@ -61,13 +61,25 @@ public class UdpLayer extends AbstractProtocolLayer {
     }
 
     @Override
-    protected ProtocolLayer buildNextLayer(int nextOffset) {
+    protected ProtocolLayer<?> buildNextLayer(final int nextOffset) {
         return null;
     }
 
     @Override
-    protected LayerEditor buildEditor(ByteBuffer bufferView) {
+    protected LayerEditor buildEditor(final ByteBuffer bufferView) {
         return null; // TODO: Implement
+    }
+
+    @Override
+    public String toString() {
+        return "UdpLayer{" +
+                "bufferOffset=" + offset +
+                ", sourcePort=" + getSourcePort() +
+                ", destinationPort=" + getDestinationPort() +
+                ", length=(H:" + getHeaderSize() + "+P:" + getPayloadSize() + "=T:" + getTotalSize() + ')' +
+                ", checksum=" + getChecksum() +
+                ", nextLayer=" + getNextLayer() +
+                '}';
     }
 
 }

@@ -22,8 +22,15 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
+
+    // IP flag masks
+    public static final int FLAG_MF = 0x01;     // MF: More fragments
+    public static final int FLAG_DF = 0x02;     // DF: Don't fragment
 
     // IANA-assigned IP protocol numbers, unsigned
     public static final int PROTOCOL_ICMP = 1;
@@ -45,7 +52,7 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
     static final int IDX_DWORD_DESTINATION_ADDRESS = 16;        // 128 : 159 (32b), destination address
     static final int IDX_BLOB_OPTIONS = 20;                     // -- up to IHL, also optionless header size --
 
-    public IPv4Layer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
+    public IPv4Layer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         super(parentLayer, backingBuffer, offset);
     }
 
@@ -61,7 +68,7 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
 
     @Override
     public void onEditorCommit(final LayerChangeset changeset, final int sizeDelta) {
-        // Invalidate lower layers if the protocol ID was changed
+        // Invalidate lower layers if the protocol ID has changed
         if (changeset != null && changeset.getEdit(IDX_BYTE_PROTOCOL_ID) != null)
             invalidateChildLayers();
 
@@ -125,6 +132,14 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
         return options;
     }
 
+    public boolean hasMoreFragmentsFlag() {
+        return (getFlags() & FLAG_MF) == FLAG_MF;
+    }
+
+    public boolean hasDontFragmentFlag() {
+        return (getFlags() & FLAG_DF) == FLAG_DF;
+    }
+
     public short calculateChecksum() {
         final ByteBuffer b = backingBuffer.duplicate();
         b.position(offset);
@@ -133,24 +148,24 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
     }
 
     @Override
-    protected ProtocolLayer buildNextLayer(int nextOffset) {
+    protected ProtocolLayer<?> buildNextLayer(final int nextOffset) {
         return LayerFactory.getFactory(Packets.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
     }
 
     @Override
-    protected IPv4LayerEditor buildEditor(ByteBuffer bufferView) {
+    protected IPv4LayerEditor buildEditor(final ByteBuffer bufferView) {
         return new IPv4LayerEditor(this, bufferView);
     }
 
     @Override
-    protected void onPayloadChanged(int sizeDelta) {
+    protected void onPayloadChanged(final int sizeDelta) {
         if (sizeDelta != 0) {
             backingBuffer.putShort(offset + IDX_WORD_TOTAL_LENGTH, (short) (getTotalLength() + sizeDelta));
             backingBuffer.putShort(offset + IDX_WORD_CHECKSUM, calculateChecksum());
         }
     }
 
-    private Inet4Address readIPv4Address(int index) {
+    private Inet4Address readIPv4Address(final int index) {
         final byte[] addressBytes = new byte[4];
         ((ByteBuffer) backingBuffer.duplicate().position(index)).get(addressBytes);
         try {
@@ -159,6 +174,31 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
             // TODO: Should we throw or log here?
             return null;
         }
+    }
+
+    @Override
+    public String toString() {
+        final Set<String> flagsStr = new HashSet<>();
+        if (hasMoreFragmentsFlag()) flagsStr.add("MF");
+        if (hasDontFragmentFlag()) flagsStr.add("DF");
+
+        return "IPv4Layer{" +
+                "bufferOffset=" + offset +
+                ", version=" + getVersion() +
+                ", IHL=" + getIHL() +
+                ", DSCP+ECN=" + getDiffServAndECN() +
+                ", length=(H:" + getHeaderSize() + "+P:" + getPayloadSize() + "=T:" + getTotalSize() + ')' +
+                ", identification=" + getIdentificationField() +
+                ", flags=" + flagsStr +
+                ", fragmentOffset=" + getFragmentOffset() +
+                ", TTL=" + getTTL() +
+                ", protocolId=" + getProtocolId() +
+                ", headerChecksum=" + getHeaderChecksum() +
+                ", sourceAddress=" + getSourceAddress().getHostAddress() +
+                ", destinationAddress=" + getDestinationAddress().getHostAddress() +
+                ", options=" + Arrays.toString(getOptions()) +
+                ", nextLayer=" + getNextLayer() +
+                '}';
     }
 
 }

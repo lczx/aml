@@ -19,8 +19,21 @@ package io.github.lczx.aml.tunnel.packet;
 import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TcpLayer extends AbstractProtocolLayer {
+
+    // TCP flag masks
+    public static final int FLAG_FIN = 0x01;    // FIN: Last packet from sender
+    public static final int FLAG_SYN = 0x02;    // SYN: Synchronize sequence numbers
+    public static final int FLAG_RST = 0x04;    // RST: Connection reset
+    public static final int FLAG_PSH = 0x08;    // PSH: Push function (push buffered data to app. layer)
+    public static final int FLAG_ACK = 0x10;    // ACK: Acknowledgement field is used
+    public static final int FLAG_URG = 0x20;    // URG: Urgent pointer field is used
+    public static final int FLAG_ECE = 0x40;    // ECE: ECN-echo, if SYN(1) is ECN capable, else congestion experienced
+    public static final int FLAG_CWR = 0x80;    // CWR: Congestion window reduced
 
     // Intra-header field offsets (in bytes)
     static final int IDX_WORD_SOURCE_PORT = 0;                  // RW   0 :  15 (16b), source port
@@ -36,7 +49,7 @@ public class TcpLayer extends AbstractProtocolLayer {
     static final int IDX_WORD_URGENT_POINTER = 18;              // RW 144 : 159 (16b), urgent pointer
     static final int IDX_BLOB_OPTIONS = 20;                     // RW -- up to data offset, optionless header size --
 
-    public TcpLayer(ProtocolLayer parentLayer, ByteBuffer backingBuffer, int offset) {
+    public TcpLayer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         super(parentLayer, backingBuffer, offset);
     }
 
@@ -67,7 +80,7 @@ public class TcpLayer extends AbstractProtocolLayer {
     }
 
     public byte getDataOffset() {
-        // Bit mask cause Java )logical shift doesn't work?)... TODO: Is it necessary?
+        // Bit mask cause Java (logical shift doesn't work?)... TODO: Is it necessary?
         return (byte) (backingBuffer.get(offset + IDX_BYTE_DATA_OFFSET_AND_RESERVED) >> 4 & 0x0F);
     }
 
@@ -83,7 +96,7 @@ public class TcpLayer extends AbstractProtocolLayer {
         return backingBuffer.getShort(offset + IDX_WORD_CHECKSUM);
     }
 
-    public int getIdxWordUrgentPointer() {
+    public int getUrgentPointer() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_URGENT_POINTER));
     }
 
@@ -96,14 +109,75 @@ public class TcpLayer extends AbstractProtocolLayer {
         return options;
     }
 
+    public boolean isFIN() {
+        return (getFlags() & FLAG_FIN) == FLAG_FIN;
+    }
+
+    public boolean isSYN() {
+        return (getFlags() & FLAG_SYN) == FLAG_SYN;
+    }
+
+    public boolean isRST() {
+        return (getFlags() & FLAG_RST) == FLAG_RST;
+    }
+
+    public boolean isPSH() {
+        return (getFlags() & FLAG_PSH) == FLAG_PSH;
+    }
+
+    public boolean isACK() {
+        return (getFlags() & FLAG_ACK) == FLAG_ACK;
+    }
+
+    public boolean isURG() {
+        return (getFlags() & FLAG_URG) == FLAG_URG;
+    }
+
+    public boolean isECE() {
+        return (getFlags() & FLAG_ECE) == FLAG_ECE;
+    }
+
+    public boolean isCWR() {
+        return (getFlags() & FLAG_CWR) == FLAG_CWR;
+    }
+
     @Override
-    protected ProtocolLayer buildNextLayer(int nextOffset) {
+    protected ProtocolLayer<?> buildNextLayer(final int nextOffset) {
         return null;
     }
 
     @Override
-    protected LayerEditor buildEditor(ByteBuffer bufferView) {
+    protected LayerEditor buildEditor(final ByteBuffer bufferView) {
         return null; // TODO: Implement
+    }
+
+    @Override
+    public String toString() {
+        final Set<String> flagsStr = new HashSet<>();
+        if (isFIN()) flagsStr.add("FIN");
+        if (isSYN()) flagsStr.add("SYN");
+        if (isRST()) flagsStr.add("RST");
+        if (isPSH()) flagsStr.add("PSH");
+        if (isACK()) flagsStr.add("ACK");
+        if (isURG()) flagsStr.add("URG");
+        if (isECE()) flagsStr.add("ECE");
+        if (isCWR()) flagsStr.add("CWR");
+
+        return "TcpLayer{" +
+                "bufferOffset=" + offset +
+                ", sourcePort=" + getSourcePort() +
+                ", destinationPort=" + getDestinationPort() +
+                ", sequenceNumber=" + getSequenceNumber() +
+                ", acknowledgementNumber=" + getAcknowledgementNumber() +
+                ", length=(H:" + getHeaderSize() + "+P:" + getPayloadSize() + "=T:" + getTotalSize() + ')' +
+                ", dataOffset=" + getDataOffset() +
+                ", flags=" + flagsStr +
+                ", windowSize=" + getWindowSize() +
+                ", checksum=" + getChecksum() +
+                ", urgentPointer=" + getUrgentPointer() +
+                ", optionsAndPadding=" + Arrays.toString(getOptions()) +
+                ", nextLayer=" + getNextLayer() +
+                '}';
     }
 
 }
