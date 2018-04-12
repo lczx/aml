@@ -80,7 +80,11 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
     }
 
     @Override
-    public void onEditorCommit(LayerChangeset changeset, int sizeDelta) {
+    public void onEditorCommit(final LayerChangeset changeset, final int sizeDelta) {
+        // Fix our backing buffer limit in face of size changes
+        if (sizeDelta != 0)
+            backingBuffer.limit(backingBuffer.limit() + sizeDelta);
+
         if (changeset == null) {
             invalidateChildLayers();
             onPayloadChanged(sizeDelta);
