@@ -25,10 +25,6 @@ final class LayerFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(LayerFactory.class);
 
-    public static final int LAYER_DATA_LINK = 2;
-    public static final int LAYER_NETWORK = 3;
-    public static final int LAYER_TRANSPORT = 4;
-
     private static final LayerDetector networkLayerDetector = new NetworkLayerDetector();
     private static final LayerDetector transportLayerDetector = new TransportLayerDetector();
 
@@ -36,9 +32,9 @@ final class LayerFactory {
 
     static LayerDetector getFactory(int type) {
         switch (type) {
-            case LAYER_NETWORK:
+            case Packets.LAYER_NETWORK:
                 return networkLayerDetector;
-            case LAYER_TRANSPORT:
+            case Packets.LAYER_TRANSPORT:
                 return transportLayerDetector;
             default:
                 throw new IllegalArgumentException("No layer factory implementation found for the given type");

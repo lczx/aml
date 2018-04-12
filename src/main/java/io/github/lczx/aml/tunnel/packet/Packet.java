@@ -21,6 +21,8 @@ import java.util.List;
 
 public interface Packet {
 
+    int getTopLayerType();
+
     ProtocolLayer<?> getFirstLayer();
 
     <T extends ProtocolLayer> T getLayer(Class<T> clazz);
@@ -29,7 +31,7 @@ public interface Packet {
 
     ByteBuffer getBufferView();
 
-    Packet attachBuffer(ByteBuffer buffer);
+    Packet attachBuffer(int topLayerType, ByteBuffer buffer);
 
     ByteBuffer detachBuffer();
 

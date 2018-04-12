@@ -123,7 +123,7 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
 
     @Override
     protected ProtocolLayer buildNextLayer(int nextOffset) {
-        return LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
+        return LayerFactory.getFactory(Packets.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
     }
 
     @Override

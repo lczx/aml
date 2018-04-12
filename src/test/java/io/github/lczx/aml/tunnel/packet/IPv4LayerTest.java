@@ -42,7 +42,8 @@ public class IPv4LayerTest {
 
     public IPv4LayerTest(byte[] packetRaw) {
         this.packetRaw = packetRaw;
-        this.packet = Packets.wrapBuffer((ByteBuffer) Packets.createBuffer().put(packetRaw).flip());
+        this.packet = Packets.wrapBuffer(Packets.LAYER_NETWORK,
+                (ByteBuffer) Packets.createBuffer().put(packetRaw).flip());
         this.ip = packet.getLayer(IPv4Layer.class);
     }
 

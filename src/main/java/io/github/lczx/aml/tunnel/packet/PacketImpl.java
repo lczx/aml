@@ -22,11 +22,17 @@ import java.util.List;
 
 class PacketImpl implements Packet {
 
+    private int topLayerType = -1;
     private ByteBuffer backingBuffer;
     private ProtocolLayer<?> firstLayer;
 
-    PacketImpl(ByteBuffer buffer) {
-        attachBuffer(buffer);
+    PacketImpl(final int topLayerType, final ByteBuffer buffer) {
+        attachBuffer(topLayerType, buffer);
+    }
+
+    @Override
+    public int getTopLayerType() {
+        return topLayerType;
     }
 
     @Override
@@ -34,8 +40,7 @@ class PacketImpl implements Packet {
         if (backingBuffer == null)
             throw new IllegalStateException("Cannot retrieve packet layers, no buffer attached");
         if (firstLayer == null)
-            firstLayer = LayerFactory.getFactory(LayerFactory.LAYER_NETWORK)
-                    .detectLayer(null, backingBuffer, 0);
+            firstLayer = LayerFactory.getFactory(topLayerType).detectLayer(null, backingBuffer, 0);
         return firstLayer;
     }
 
@@ -67,10 +72,13 @@ class PacketImpl implements Packet {
     }
 
     @Override
-    public Packet attachBuffer(ByteBuffer buffer) {
+    public Packet attachBuffer(final int topLayerType, final ByteBuffer buffer) {
         if (backingBuffer != null)
             throw new IllegalStateException("Packet already attached to another buffer");
-        if (buffer != null) buffer.rewind();
+        if (buffer != null) {
+            this.topLayerType = topLayerType;
+            buffer.rewind();
+        }
         this.backingBuffer = buffer;
         return this;
     }
@@ -80,6 +88,7 @@ class PacketImpl implements Packet {
         if (backingBuffer == null)
             throw new IllegalStateException("No buffer attached to this packet");
         final ByteBuffer ret = backingBuffer;
+        topLayerType = -1;
         backingBuffer = null;
         firstLayer = null;
         return ret;

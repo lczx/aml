@@ -22,14 +22,18 @@ import java.nio.ByteBuffer;
 
 public final class Packets {
 
+    public static final int LAYER_DATA_LINK = 2;
+    public static final int LAYER_NETWORK = 3;
+    public static final int LAYER_TRANSPORT = 4;
+
     private Packets() { }
 
     public static ByteBuffer createBuffer() {
         return ByteBufferPool.acquire();
     }
 
-    public static Packet wrapBuffer(ByteBuffer buffer) {
-        return new PacketImpl(buffer);
+    public static Packet wrapBuffer(final int topLayerType, final ByteBuffer buffer) {
+        return new PacketImpl(topLayerType, buffer);
     }
 
 }
