@@ -41,19 +41,19 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> implements
     public static final int PROTOCOL_UDP = 17;
 
     // Intra-header field offsets (in bytes)
-    static final int IDX_BYTE_VERSION_AND_IHL = 0;              //   0 :   3  (4b), version
-    //                                                          //   4 :   7  (4b), internet header length
-    static final int IDX_BYTE_DSCP_ECN = 1;                     //   8 :  15  (8b), diffServices & ECN (ex. ToS)
-    static final int IDX_WORD_TOTAL_LENGTH = 2;                 //  16 :  31 (16b), total length
-    static final int IDX_WORD_IDENTIFICATION = 4;               //  32 :  47 (16b), identification
-    static final int IDX_WORD_FLAGS_AND_FRAGMENT_OFFSET = 6;    //  48 :  50  (3b), flags
-    //                                                          //  51 :  63 (13b), fragment offset
-    static final int IDX_BYTE_TIME_TO_LIVE = 8;                 //  64 :  71  (8b), time to live
-    static final int IDX_BYTE_PROTOCOL_ID = 9;                  //  72 :  79  (8b), protocol
-    static final int IDX_WORD_CHECKSUM = 10;                    //  80 :  95 (16b), header checksum
-    static final int IDX_DWORD_SOURCE_ADDRESS = 12;             //  96 : 127 (32b), source address
-    static final int IDX_DWORD_DESTINATION_ADDRESS = 16;        // 128 : 159 (32b), destination address
-    static final int IDX_BLOB_OPTIONS = 20;                     // -- up to IHL, also optionless header size --
+    static final int IDX_BYTE_VERSION_AND_IHL = 0;              // R-   0 :   3  (4b), version
+    //                                                          // RA   4 :   7  (4b), internet header length
+    static final int IDX_BYTE_DSCP_ECN = 1;                     // R-   8 :  15  (8b), diffServices & ECN (ex. ToS)
+    static final int IDX_WORD_TOTAL_LENGTH = 2;                 // RA  16 :  31 (16b), total length
+    static final int IDX_WORD_IDENTIFICATION = 4;               // RW  32 :  47 (16b), identification
+    static final int IDX_WORD_FLAGS_AND_FRAGMENT_OFFSET = 6;    // R-  48 :  50  (3b), flags
+    //                                                          // R-  51 :  63 (13b), fragment offset
+    static final int IDX_BYTE_TIME_TO_LIVE = 8;                 // RW  64 :  71  (8b), time to live
+    static final int IDX_BYTE_PROTOCOL_ID = 9;                  // RW  72 :  79  (8b), protocol
+    static final int IDX_WORD_CHECKSUM = 10;                    // RA  80 :  95 (16b), header checksum
+    static final int IDX_DWORD_SOURCE_ADDRESS = 12;             // RW  96 : 127 (32b), source address
+    static final int IDX_DWORD_DESTINATION_ADDRESS = 16;        // RW 128 : 159 (32b), destination address
+    static final int IDX_BLOB_OPTIONS = 20;                     // RW -- up to IHL, also optionless header size --
 
     public IPv4Layer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         super(parentLayer, backingBuffer, offset);

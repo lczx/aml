@@ -26,10 +26,10 @@ public class UdpLayer extends AbstractProtocolLayer<UdpLayerEditor> implements U
     public static final int HEADER_SIZE = 8;
 
     // Intra-header field offsets (in bytes)
-    static final int IDX_WORD_SOURCE_PORT = 0;          //    0 :  15 (16b), source port
-    static final int IDX_WORD_DESTINATION_PORT = 2;     //   16 :  31 (16b), destination port
-    static final int IDX_WORD_TOTAL_LENGTH = 4;         //   32 :  47 (16b), length
-    static final int IDX_WORD_CHECKSUM = 6;             //   48 :  63 (16b), checksum
+    static final int IDX_WORD_SOURCE_PORT = 0;          // RW    0 :  15 (16b), source port
+    static final int IDX_WORD_DESTINATION_PORT = 2;     // RW   16 :  31 (16b), destination port
+    static final int IDX_WORD_TOTAL_LENGTH = 4;         // RA   32 :  47 (16b), length
+    static final int IDX_WORD_CHECKSUM = 6;             // RA   48 :  63 (16b), checksum
 
     public UdpLayer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         super(parentLayer, backingBuffer, offset);
