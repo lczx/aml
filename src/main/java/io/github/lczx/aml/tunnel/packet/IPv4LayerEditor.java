@@ -17,6 +17,8 @@
 package io.github.lczx.aml.tunnel.packet;
 
 import io.github.lczx.aml.tunnel.packet.editor.LayerEditorBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.nio.ByteBuffer;
@@ -24,13 +26,22 @@ import java.util.Arrays;
 
 import static io.github.lczx.aml.tunnel.packet.IPv4Layer.*;
 
-public class IPv4LayerEditor extends LayerEditorBase {
+public class IPv4LayerEditor extends LayerEditorBase<IPv4LayerEditor> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(IPv4LayerEditor.class);
 
     private final IPv4Layer protocolLayer;
 
     public IPv4LayerEditor(IPv4Layer protocolLayer, ByteBuffer targetBuffer) {
         super(targetBuffer);
         this.protocolLayer = protocolLayer;
+    }
+
+    @Override
+    public void commit() {
+        super.commit();
+        targetBuffer.putShort(IDX_WORD_CHECKSUM, protocolLayer.calculateChecksum());
+        LOG.trace("IPv4 header change committed");
     }
 
     public IPv4LayerEditor setIdentificationField(int identification) {

@@ -114,6 +114,13 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
         return options;
     }
 
+    public short calculateChecksum() {
+        ByteBuffer b = backingBuffer.duplicate();
+        b.position(offset);
+        b.limit(getHeaderSize());
+        return InternetChecksum.newInstance().update(b, IDX_WORD_CHECKSUM).compute();
+    }
+
     @Override
     protected ProtocolLayer buildNextLayer(int nextOffset) {
         return LayerFactory.getFactory(LayerFactory.LAYER_TRANSPORT).detectLayer(this, backingBuffer, nextOffset);
