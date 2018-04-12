@@ -80,6 +80,14 @@ public class UdpLayer extends AbstractProtocolLayer<UdpLayerEditor> implements U
     }
 
     @Override
+    protected void onPayloadChanged(final int sizeDelta) {
+        if (sizeDelta != 0) {
+            backingBuffer.putShort(offset + IDX_WORD_TOTAL_LENGTH, (short) (getTotalLength() + sizeDelta));
+            backingBuffer.putShort(offset + IDX_WORD_CHECKSUM, calculateChecksum());
+        }
+    }
+
+    @Override
     public String toString() {
         return "UdpLayer{" +
                 "bufferOffset=" + offset +
