@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerChangeset;
+
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -55,6 +57,15 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
     @Override
     public int getTotalSize() {
         return getTotalLength();
+    }
+
+    @Override
+    public void onEditorCommit(final LayerChangeset changeset, final int sizeDelta) {
+        // Invalidate lower layers if the protocol ID was changed
+        if (changeset != null && changeset.getEdit(IDX_BYTE_PROTOCOL_ID) != null)
+            invalidateChildLayers();
+
+        super.onEditorCommit(changeset, sizeDelta);
     }
 
     public byte getVersion() {
