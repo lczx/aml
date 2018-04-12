@@ -115,7 +115,7 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
     }
 
     public short calculateChecksum() {
-        ByteBuffer b = backingBuffer.duplicate();
+        final ByteBuffer b = backingBuffer.duplicate();
         b.position(offset);
         b.limit(getHeaderSize());
         return InternetChecksum.newInstance().update(b, IDX_WORD_CHECKSUM).compute();
@@ -129,6 +129,14 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> {
     @Override
     protected IPv4LayerEditor buildEditor(ByteBuffer bufferView) {
         return new IPv4LayerEditor(this, bufferView);
+    }
+
+    @Override
+    protected void onPayloadChanged(int sizeDelta) {
+        if (sizeDelta != 0) {
+            backingBuffer.putShort(offset + IDX_WORD_TOTAL_LENGTH, (short) (getTotalLength() + sizeDelta));
+            backingBuffer.putShort(offset + IDX_WORD_CHECKSUM, calculateChecksum());
+        }
     }
 
     private Inet4Address readIPv4Address(int index) {

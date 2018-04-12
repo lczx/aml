@@ -16,7 +16,9 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerChangeset;
 import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
+import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
 
 import java.nio.ByteBuffer;
 
@@ -62,6 +64,12 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
     }
 
     @Override
+    public PayloadEditor payloadEditor() {
+        // Let the editor operate on a view without limit of the buffer starting from this layer's payload offset
+        return new PayloadEditor(this, makeBufferView(offset + getHeaderSize(), -1));
+    }
+
+    @Override
     public ByteBuffer getBufferView() {
         return makeBufferView(offset, getTotalSize()).asReadOnlyBuffer();
     }
@@ -71,9 +79,23 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
         return makeBufferView(offset + getHeaderSize(), getPayloadSize()).asReadOnlyBuffer();
     }
 
+    @Override
+    public void onEditorCommit(LayerChangeset changeset, int sizeDelta) {
+        if (changeset == null) {
+            invalidateChildLayers();
+            onPayloadChanged(sizeDelta);
+        }
+    }
+
+    protected void invalidateChildLayers() {
+        nextLayer = null;
+    }
+
     protected abstract ProtocolLayer<?> buildNextLayer(int nextOffset);
 
     protected abstract E buildEditor(ByteBuffer bufferView);
+
+    protected void onPayloadChanged(int sizeDelta) { }
 
     private ByteBuffer makeBufferView(int offset, int size) {
         final ByteBuffer view = backingBuffer.duplicate();

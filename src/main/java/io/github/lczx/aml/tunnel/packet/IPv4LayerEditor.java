@@ -42,6 +42,7 @@ public class IPv4LayerEditor extends LayerEditorBase<IPv4LayerEditor> {
         super.commit();
         targetBuffer.putShort(IDX_WORD_CHECKSUM, protocolLayer.calculateChecksum());
         LOG.trace("IPv4 header change committed");
+        protocolLayer.onEditorCommit(changeset, 0); // We will use sizeDelta after implementing option edits
     }
 
     public IPv4LayerEditor setIdentificationField(int identification) {

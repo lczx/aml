@@ -16,7 +16,9 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerChangeset;
 import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
+import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
 
 import java.nio.ByteBuffer;
 
@@ -36,8 +38,12 @@ public interface ProtocolLayer<E extends LayerEditor> {
 
     E editor();
 
+    PayloadEditor payloadEditor();
+
     ByteBuffer getBufferView();
 
     ByteBuffer getPayloadBufferView();
+
+    void onEditorCommit(LayerChangeset changeset, int sizeDelta);
 
 }
