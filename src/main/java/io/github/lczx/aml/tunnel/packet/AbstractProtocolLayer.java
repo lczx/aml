@@ -80,6 +80,12 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
     }
 
     @Override
+    public void onChildLayerChanged(final ProtocolLayer<?> layer, final LayerChangeset changeset, final int sizeDelta) {
+        if (layer == nextLayer) onPayloadChanged(sizeDelta);
+        if (parentLayer != null) parentLayer.onChildLayerChanged(layer, changeset, sizeDelta);
+    }
+
+    @Override
     public void onEditorCommit(final LayerChangeset changeset, final int sizeDelta) {
         // Fix our backing buffer limit in face of size changes
         if (sizeDelta != 0)
@@ -89,6 +95,9 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
             invalidateChildLayers();
             onPayloadChanged(sizeDelta);
         }
+
+        // Let our parent (if we have one) know that we have changed
+        if (parentLayer != null) parentLayer.onChildLayerChanged(this, changeset, sizeDelta);
     }
 
     protected void invalidateChildLayers() {

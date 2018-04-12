@@ -105,6 +105,17 @@ public interface ProtocolLayer<E extends LayerEditor> {
     ByteBuffer getPayloadBufferView();
 
     /**
+     * Called by children layers to notify this layer of changes in their content.
+     *
+     * <p> <i>Use case: An application-level layer can notify the TCP layer to update its checksum.</i>
+     *
+     * @param layer     The layer that changed
+     * @param changeset The change set committed to the layer's header or {@code null} if it was a payload edit
+     * @param sizeDelta The difference in size from before the edit
+     */
+    void onChildLayerChanged(ProtocolLayer<?> layer, LayerChangeset changeset, int sizeDelta);
+
+    /**
      * Called by a layer or payload editor after committing its changes.
      *
      * <p> <b>Important note:</b> Payload editors cannot make changes to the header of the layer; if this call was
