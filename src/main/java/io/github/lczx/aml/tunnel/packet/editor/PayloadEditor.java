@@ -37,14 +37,30 @@ public class PayloadEditor {
     }
 
     public ByteBuffer buffer() {
+        return buffer(false);
+    }
+
+    public ByteBuffer buffer(final boolean writeNow) {
         originalPayloadSize = protocolLayer.getPayloadSize();
-        targetBuffer.limit(originalPayloadSize);
+        if (!writeNow) targetBuffer.limit(originalPayloadSize);
         return targetBuffer;
     }
 
     public void commit() {
         final int sizeDelta = targetBuffer.limit() - originalPayloadSize;
         LOG.trace("Payload of {}, change committed: size changed of {} bytes",
+                protocolLayer.getClass().getSimpleName(), sizeDelta);
+        protocolLayer.onEditorCommit(null, sizeDelta);
+    }
+
+    public void flipAndCommit() {
+        targetBuffer.flip();
+        commit();
+    }
+
+    public void clearContent() {
+        final int sizeDelta = -protocolLayer.getPayloadSize();
+        LOG.trace("Payload of {} cleared, size changed of {} bytes",
                 protocolLayer.getClass().getSimpleName(), sizeDelta);
         protocolLayer.onEditorCommit(null, sizeDelta);
     }
