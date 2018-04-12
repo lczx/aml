@@ -16,11 +16,17 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.buffer.ByteBufferPool;
+
 import java.nio.ByteBuffer;
 
 public final class Packets {
 
     private Packets() { }
+
+    public static ByteBuffer createBuffer() {
+        return ByteBufferPool.acquire();
+    }
 
     public static Packet wrapBuffer(ByteBuffer buffer) {
         return new PacketImpl(buffer);
