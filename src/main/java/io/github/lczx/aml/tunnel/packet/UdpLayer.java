@@ -20,7 +20,10 @@ import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
 
 import java.nio.ByteBuffer;
 
-public class UdpLayer extends AbstractProtocolLayer {
+/**
+ * A {@link ProtocolLayer} representing the User Datagram Protocol.
+ */
+public class UdpLayer extends AbstractProtocolLayer implements UdpHeader {
 
     private static final int HEADER_SIZE = 8;
 
@@ -44,18 +47,22 @@ public class UdpLayer extends AbstractProtocolLayer {
         return getTotalLength();
     }
 
+    @Override
     public int getSourcePort() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_SOURCE_PORT));
     }
 
+    @Override
     public int getDestinationPort() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_DESTINATION_PORT));
     }
 
+    @Override
     public int getTotalLength() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_TOTAL_LENGTH));
     }
 
+    @Override
     public short getChecksum() {
         return backingBuffer.getShort(offset + IDX_WORD_CHECKSUM);
     }

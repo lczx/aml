@@ -30,7 +30,7 @@ public abstract class LayerChangeset implements Iterable<LayerChangeset.Entry>, 
      * Adds an edit to this changeset.
      *
      * @param offset The offset in the buffer to change
-     * @param value The new value to put
+     * @param value  The new value to put
      */
     public abstract void putEdit(int offset, Object value);
 

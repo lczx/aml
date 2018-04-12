@@ -22,6 +22,16 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Raw editor for {@link ProtocolLayer} payloads,
+ *
+ * <p> This class is initialized with a slice of the packet's backing buffer, ranging from the start of the payload
+ * to edit to the capacity of the buffer.
+ *
+ * <p> A call to {@link #buffer()} sets the limit of this slice to the current payload size and gives back
+ * the raw buffer for editing. Calling {@link #commit()} after editing the buffer notifies the packet of the edit
+ * (and possible change of limit) so it can update headers and invalidate caches.
+ */
 public class PayloadEditor {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayloadEditor.class);
@@ -31,21 +41,51 @@ public class PayloadEditor {
 
     private int originalPayloadSize;
 
-    public PayloadEditor(ProtocolLayer protocolLayer, ByteBuffer targetBuffer) {
+    /**
+     * Creates a new {@link PayloadEditor} instance.
+     *
+     * @param protocolLayer The {@link ProtocolLayer} bound to this editor
+     * @param targetBuffer  The buffer to edit (usually a {@link ByteBuffer#slice()} of the packet's backing buffer)
+     */
+    public PayloadEditor(final ProtocolLayer protocolLayer, final ByteBuffer targetBuffer) {
         this.protocolLayer = protocolLayer;
         this.targetBuffer = targetBuffer;
     }
 
+    /**
+     * Retrieves the raw buffer to edit. See {@link #buffer(boolean)} for a full description.
+     *
+     * @return A buffer containing the payload of the {@link ProtocolLayer} for edit
+     * @see #buffer(boolean)
+     */
     public ByteBuffer buffer() {
         return buffer(false);
     }
 
+    /**
+     * Retrieves the raw buffer to edit. The limit is set to the current payload size and the capacity to the remaining
+     * capacity in the packet's backing buffer. Call {@link #commit()} once done editing.
+     *
+     * @param writeNow {@code true} if there is no interest in setting the limit to the previous payload size; spares
+     *                 a {@link ByteBuffer#clear()} operation and a cast back to {@link ByteBuffer}. The limit is kept
+     *                 to the backing buffer's remaining capacity.
+     * @return A buffer containing the payload of the {@link ProtocolLayer} for edit
+     * @see  #commit()
+     */
     public ByteBuffer buffer(final boolean writeNow) {
         originalPayloadSize = protocolLayer.getPayloadSize();
         if (!writeNow) targetBuffer.limit(originalPayloadSize);
         return targetBuffer;
     }
 
+    /**
+     * Notifies the {@link ProtocolLayer} bound to this editor of the changes made to the buffer provided by
+     * {@link #buffer()}.
+     *
+     * <p> <b>Changes to the buffer after calling this method can cause corruption to the packet.</b>
+     *
+     * @see #buffer()
+     */
     public void commit() {
         final int sizeDelta = targetBuffer.limit() - originalPayloadSize;
         LOG.trace("Payload of {}, change committed: size changed of {} bytes",
@@ -53,11 +93,19 @@ public class PayloadEditor {
         protocolLayer.onEditorCommit(null, sizeDelta);
     }
 
+    /**
+     * Utility method to {@link ByteBuffer#flip()} the buffer before {@link #commit()}.
+     *
+     * @see #commit()
+     */
     public void flipAndCommit() {
         targetBuffer.flip();
         commit();
     }
 
+    /**
+     * Utility method to empty the payload attached to this editor and {@link #commit()} the changes.
+     */
     public void clearContent() {
         final int sizeDelta = -protocolLayer.getPayloadSize();
         LOG.trace("Payload of {} cleared, size changed of {} bytes",

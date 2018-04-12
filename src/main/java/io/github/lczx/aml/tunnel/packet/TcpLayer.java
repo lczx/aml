@@ -23,7 +23,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-public class TcpLayer extends AbstractProtocolLayer {
+/**
+ * A {@link ProtocolLayer} representing the Transport Control Protocol.
+ */
+public class TcpLayer extends AbstractProtocolLayer implements TcpHeader {
 
     // TCP flag masks
     public static final int FLAG_FIN = 0x01;    // FIN: Last packet from sender
@@ -63,43 +66,53 @@ public class TcpLayer extends AbstractProtocolLayer {
         return getParentLayer().getPayloadSize();
     }
 
+    @Override
     public int getSourcePort() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_SOURCE_PORT));
     }
 
+    @Override
     public int getDestinationPort() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_DESTINATION_PORT));
     }
 
+    @Override
     public long getSequenceNumber() {
         return NumberUtils.asUnsigned(backingBuffer.getInt(offset + IDX_DWORD_SEQUENCE_NUMBER));
     }
 
+    @Override
     public long getAcknowledgementNumber() {
         return NumberUtils.asUnsigned(backingBuffer.getInt(offset + IDX_DWORD_ACKNOWLEDGEMENT_NUMBER));
     }
 
+    @Override
     public byte getDataOffset() {
         // Bit mask cause Java (logical shift doesn't work?)... TODO: Is it necessary?
         return (byte) (backingBuffer.get(offset + IDX_BYTE_DATA_OFFSET_AND_RESERVED) >> 4 & 0x0F);
     }
 
+    @Override
     public byte getFlags() {
         return backingBuffer.get(offset + IDX_BYTE_FLAGS);
     }
 
+    @Override
     public int getWindowSize() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_WINDOW_SIZE));
     }
 
+    @Override
     public short getChecksum() {
         return backingBuffer.getShort(offset + IDX_WORD_CHECKSUM);
     }
 
+    @Override
     public int getUrgentPointer() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_URGENT_POINTER));
     }
 
+    @Override
     public byte[] getOptions() {
         final int optionsSize = getHeaderSize() - IDX_BLOB_OPTIONS;
         if (optionsSize == 0) return null;

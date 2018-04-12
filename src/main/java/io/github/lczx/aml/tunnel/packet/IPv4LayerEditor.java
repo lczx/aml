@@ -26,13 +26,16 @@ import java.util.Arrays;
 
 import static io.github.lczx.aml.tunnel.packet.IPv4Layer.*;
 
+/**
+ * Editor for {@link IPv4Layer}.
+ */
 public class IPv4LayerEditor extends LayerEditorBase<IPv4LayerEditor> {
 
     private static final Logger LOG = LoggerFactory.getLogger(IPv4LayerEditor.class);
 
     private final IPv4Layer protocolLayer;
 
-    public IPv4LayerEditor(IPv4Layer protocolLayer, ByteBuffer targetBuffer) {
+    IPv4LayerEditor(final IPv4Layer protocolLayer, final ByteBuffer targetBuffer) {
         super(targetBuffer);
         this.protocolLayer = protocolLayer;
     }
@@ -45,36 +48,72 @@ public class IPv4LayerEditor extends LayerEditorBase<IPv4LayerEditor> {
         protocolLayer.onEditorCommit(changeset, 0); // We will use sizeDelta after implementing option edits
     }
 
-    public IPv4LayerEditor setIdentificationField(int identification) {
+    /**
+     * Sets this packet's <i>identification</i> field (16 bits).
+     *
+     * @param identification The new value for the field
+     * @return This editor
+     */
+    public IPv4LayerEditor setIdentificationField(final int identification) {
         if (protocolLayer.getIdentificationField() != identification)
             changeset.putEdit(IDX_WORD_IDENTIFICATION, (short) identification);
         return this;
     }
 
-    public IPv4LayerEditor setTTL(short ttl) {
+    /**
+     * Sets this packet's <i>time to live</i> field (8 bits).
+     *
+     * @param ttl The new value for the field
+     * @return This editor
+     */
+    public IPv4LayerEditor setTTL(final short ttl) {
         if (protocolLayer.getTTL() != ttl)
             changeset.putEdit(IDX_BYTE_TIME_TO_LIVE, (byte) ttl);
         return this;
     }
 
-    public IPv4LayerEditor setProtocolId(int protocolId) {
+    /**
+     * Sets this packet's <i>protocol ID</i> field (8 bits).
+     *
+     * @param protocolId The new value for the field
+     * @return This editor
+     */
+    public IPv4LayerEditor setProtocolId(final int protocolId) {
         if (protocolLayer.getProtocolId() != protocolId)
             changeset.putEdit(IDX_BYTE_PROTOCOL_ID, (byte) protocolId);
         return this;
     }
 
-    public IPv4LayerEditor setSourceAddress(Inet4Address sourceAddress) {
+    /**
+     * Sets this packet's <i>source address</i> (32 bits).
+     *
+     * @param sourceAddress The new value for the field
+     * @return This editor
+     */
+    public IPv4LayerEditor setSourceAddress(final Inet4Address sourceAddress) {
         if (!Arrays.equals(protocolLayer.getSourceAddress().getAddress(), sourceAddress.getAddress()))
             changeset.putEdit(IDX_DWORD_SOURCE_ADDRESS, sourceAddress.getAddress());
         return this;
     }
 
-    public IPv4LayerEditor setDestinationAddress(Inet4Address destinationAddress) {
+    /**
+     * Sets this packet's <i>destination address</i> (32 bits).
+     *
+     * @param destinationAddress The new value for the field
+     * @return This editor
+     */
+    public IPv4LayerEditor setDestinationAddress(final Inet4Address destinationAddress) {
         if (!Arrays.equals(protocolLayer.getDestinationAddress().getAddress(), destinationAddress.getAddress()))
             changeset.putEdit(IDX_DWORD_DESTINATION_ADDRESS, destinationAddress.getAddress());
         return this;
     }
 
+    /**
+     * Sets this packet's <i>options</i> (variable length, 0-320 bits, divisible by 32).
+     *
+     * @param options The new value for the field
+     * @return This editor
+     */
     public IPv4LayerEditor setOptions(byte[] options) {
         // TODO: Implement
         return this;
