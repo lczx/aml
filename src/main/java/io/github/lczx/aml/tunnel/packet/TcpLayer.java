@@ -67,6 +67,18 @@ public class TcpLayer extends AbstractProtocolLayer<TcpLayerEditor> implements T
     }
 
     @Override
+    public void onParentHeaderChanged(final ProtocolLayer<?> layer, final LayerChangeset changeset) {
+        // Check if IP fields used to generate a pseudo-header are changed, and update our checksum accordingly
+        if (layer instanceof IPv4Layer && (
+                changeset.getEdit(IPv4Layer.IDX_DWORD_SOURCE_ADDRESS) != null ||
+                changeset.getEdit(IPv4Layer.IDX_DWORD_DESTINATION_ADDRESS) != null)) {
+            // Theoretically we need to use an editor to notify other layers of this change
+            backingBuffer.putShort(offset + IDX_WORD_CHECKSUM, calculateChecksum());
+        }
+        super.onParentHeaderChanged(layer, changeset);
+    }
+
+    @Override
     public int getSourcePort() {
         return NumberUtils.asUnsigned(backingBuffer.getShort(offset + IDX_WORD_SOURCE_PORT));
     }

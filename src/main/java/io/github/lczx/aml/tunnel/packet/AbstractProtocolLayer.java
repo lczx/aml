@@ -29,7 +29,7 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
     private final ProtocolLayer<?> parentLayer;
     private ProtocolLayer<?> nextLayer;
 
-    public AbstractProtocolLayer(ProtocolLayer<?> parentLayer, ByteBuffer backingBuffer, int offset) {
+    public AbstractProtocolLayer(final ProtocolLayer<?> parentLayer, final ByteBuffer backingBuffer, final int offset) {
         this.parentLayer = parentLayer;
         this.backingBuffer = backingBuffer;
         this.offset = offset;
@@ -80,6 +80,11 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
     }
 
     @Override
+    public void onParentHeaderChanged(final ProtocolLayer<?> layer, final LayerChangeset changeset) {
+        if (nextLayer != null) nextLayer.onParentHeaderChanged(layer, changeset);
+    }
+
+    @Override
     public void onChildLayerChanged(final ProtocolLayer<?> layer, final LayerChangeset changeset, final int sizeDelta) {
         if (layer == nextLayer) onPayloadChanged(sizeDelta);
         if (parentLayer != null) parentLayer.onChildLayerChanged(layer, changeset, sizeDelta);
@@ -96,6 +101,8 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
             onPayloadChanged(sizeDelta);
         }
 
+        if (nextLayer != null) nextLayer.onParentHeaderChanged(this, changeset);
+
         // Let our parent (if we have one) know that we have changed
         if (parentLayer != null) parentLayer.onChildLayerChanged(this, changeset, sizeDelta);
     }
@@ -108,9 +115,9 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
 
     protected abstract E buildEditor(ByteBuffer bufferView);
 
-    protected void onPayloadChanged(int sizeDelta) { }
+    protected void onPayloadChanged(final int sizeDelta) { }
 
-    private ByteBuffer makeBufferView(int offset, int size) {
+    private ByteBuffer makeBufferView(final int offset, final int size) {
         final ByteBuffer view = backingBuffer.duplicate();
         view.position(offset);
         view.limit(size < 0 ? view.capacity() : offset + size);
