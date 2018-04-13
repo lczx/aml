@@ -81,6 +81,7 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
 
     @Override
     public void onParentHeaderChanged(final ProtocolLayer<?> layer, final LayerChangeset changeset) {
+        getNextLayer(); // Build the next layer to propagate the event
         if (nextLayer != null) nextLayer.onParentHeaderChanged(layer, changeset);
     }
 
@@ -101,7 +102,10 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
             onPayloadChanged(sizeDelta);
         }
 
-        if (nextLayer != null) nextLayer.onParentHeaderChanged(this, changeset);
+        if (changeset != null) {
+            getNextLayer(); // Rebuild that now
+            if (nextLayer != null) nextLayer.onParentHeaderChanged(this, changeset);
+        }
 
         // Let our parent (if we have one) know that we have changed
         if (parentLayer != null) parentLayer.onChildLayerChanged(this, changeset, sizeDelta);
