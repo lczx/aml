@@ -18,12 +18,15 @@ package io.github.lczx.aml.tunnel.packet;
 
 import io.github.lczx.aml.tunnel.packet.buffer.ByteBufferPool;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
+import io.github.lczx.aml.tunnel.packet.editor.RelocationException;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeNoException;
 import static org.junit.Assume.assumeTrue;
 
 final class PacketTestUtils {
@@ -111,7 +114,7 @@ final class PacketTestUtils {
         payloadEditor.commit(); // Without flipping, we don't want to change the limit (and size of the payload)
 
         // Test IP checksum values
-        short newIpChecksum = ip.getHeaderChecksum();
+        final short newIpChecksum = ip.getHeaderChecksum();
         assertEquals("Calculated IP checksum must match field value",
                 newIpChecksum, ip.calculateChecksum());
         assertEquals("IP checksum should not change after payload edit (without size change)",
@@ -124,6 +127,47 @@ final class PacketTestUtils {
 
         // Check views consistency
         checkBufferSlices(packet, bufferLimit, transportLayer.getClass());
+    }
+
+    static void checkIpOptionsChange(final Packet packet, final Class<? extends ProtocolLayer> tlClass) {
+        final IPv4Layer ip = packet.getLayer(IPv4Layer.class);
+        ProtocolLayer<?> tp = packet.getLayer(tlClass);
+
+        int prevSrcPort = -1, prevDstPort = -1;
+        if (UdpLayer.class == tlClass) {
+            prevSrcPort = ((UdpLayer) tp).getSourcePort();
+            prevDstPort = ((UdpLayer) tp).getDestinationPort();
+        } else if (TcpLayer.class == tlClass) {
+            prevSrcPort = ((TcpLayer) tp).getSourcePort();
+            prevDstPort = ((TcpLayer) tp).getDestinationPort();
+        }
+        final int prevSize = tp.getTotalSize();
+        final byte[] prevTransportPayload = dumpBuffer(tp.getPayloadBufferView());
+
+        final int optsLen = RANDOM.nextInt(11) * 4;
+        try {
+            ip.editor().setOptions(new byte[optsLen]).commit();
+        } catch (final RelocationException e) {
+            assumeNoException("We were lucky enough that our random options + our " +
+                    "random original payload overflowed the buffer, skip test", e);
+        }
+
+        // Retrieve the transport layer again: it has been rebuilt with the new offset
+        tp = packet.getLayer(tlClass);
+        assertEquals(ip.getHeaderSize(), IPv4Layer.IDX_BLOB_OPTIONS + optsLen);
+        assertEquals(ip.getHeaderSize(), tp.getBufferOffset());
+
+        if (UdpLayer.class == tlClass) {
+            assertEquals(prevSrcPort, ((UdpLayer) tp).getSourcePort());
+            assertEquals(prevDstPort, ((UdpLayer) tp).getDestinationPort());
+        } else if (TcpLayer.class == tlClass) {
+            assertEquals(prevSrcPort, ((TcpLayer) tp).getSourcePort());
+            assertEquals(prevDstPort, ((TcpLayer) tp).getDestinationPort());
+        }
+        assertEquals(prevSize, tp.getTotalSize());
+        assertArrayEquals(prevTransportPayload, dumpBuffer(tp.getPayloadBufferView()));
+
+        checkBufferSlices(packet, ip.getTotalSize(), tlClass);
     }
 
 }
