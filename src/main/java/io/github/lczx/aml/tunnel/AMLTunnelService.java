@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
+import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,9 @@ public class AMLTunnelService extends VpnService {
 
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
+
+    private Thread vpnThread;
+    private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
@@ -75,12 +79,30 @@ public class AMLTunnelService extends VpnService {
             stopSelf();
         }
 
+        final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
+
+        vpnThread = new Thread(new TaskRunner("VPN I/O",
+                new TunUplinkReader(vpnInterface.getFileDescriptor(), dispatcher),
+                new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)));
+
+        // TODO: Do something with these pipes
+
+        vpnThread.start();
         isRunning = true;
     }
 
     private void stopVPN() {
         isRunning = false;
+        vpnThread.interrupt();
 
+        cleanup();
+    }
+
+    private void cleanup() {
+        tcpTxPipe = null;
+        udpTxPipe = null;
+        rxPipe = null;
+        // TODO: Clear buffer pool when implemented
         IOUtils.closeResources(vpnInterface);
     }
 

@@ -16,11 +16,14 @@
 
 package io.github.lczx.aml.tunnel;
 
+import io.github.lczx.aml.tunnel.packet.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Objects;
 
@@ -36,7 +39,7 @@ public class TunDownlinkWriter implements TaskRunner.Task {
         Objects.requireNonNull(deviceDescriptor, "Device descriptor must not be null");
         Objects.requireNonNull(downlinkSource, "Packet source must not be null");
         this.deviceDescriptor = deviceDescriptor;
-        this.downlinkSource= downlinkSource;
+        this.downlinkSource = downlinkSource;
     }
 
     @Override
@@ -46,9 +49,24 @@ public class TunDownlinkWriter implements TaskRunner.Task {
     }
 
     @Override
-    public boolean loop() throws Exception {
-        // TODO: Implement
-        return false;
+    public boolean loop() {
+        final Packet packet = downlinkSource.poll();
+
+        // If the queue is empty, return false to signal that no work was done
+        if (packet == null) return false;
+
+        try {
+            final ByteBuffer bytes = packet.getBufferView();
+            while (bytes.hasRemaining()) {
+                final int written = deviceOutput.write(bytes);
+                LOG.trace("{} bytes written", written);
+            }
+        } catch (final IOException e) {
+            LOG.error("VPN device write exception", e);
+        }
+
+        // TODO: Add packet recycling (w/ buffer releasing) here if implemented
+        return true;
     }
 
     @Override
