@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.editor.LayerChangeset;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -153,7 +155,18 @@ public class TcpLayer extends AbstractProtocolLayer<TcpLayerEditor> implements T
     }
 
     public short calculateChecksum() {
-        return 0; // TODO: Implement
+        final IPv4Layer ipHeader = (IPv4Layer) getParentLayer();
+
+        // Create a pseudo-header (12 bytes)
+        final ByteBuffer pseudoHeader = ByteBuffer.wrap(new byte[12]);
+        pseudoHeader.put(ipHeader.getSourceAddress().getAddress());
+        pseudoHeader.put(ipHeader.getDestinationAddress().getAddress());
+        pseudoHeader.putShort(ipHeader.getProtocolId()); // <- already unsigned short with upper byte zero
+        pseudoHeader.putShort((short) this.getTotalSize());
+        pseudoHeader.flip();
+
+        // Calculate checksum and return
+        return InternetChecksum.newInstance().update(pseudoHeader).update(getBufferView(), IDX_WORD_CHECKSUM).compute();
     }
 
     @Override
@@ -164,6 +177,18 @@ public class TcpLayer extends AbstractProtocolLayer<TcpLayerEditor> implements T
     @Override
     protected TcpLayerEditor buildEditor(final ByteBuffer bufferView) {
         return new TcpLayerEditor(this, bufferView);
+    }
+
+    @Override
+    public void onEditorCommit(final LayerChangeset changeset, final int sizeDelta) {
+        super.onEditorCommit(changeset, sizeDelta);
+
+        // Instead of overriding onPayloadChanged() we override onEditorCommit() and calculate our checksum after
+        // parent.onChildLayerChanged() is called; this allows IP to update its length, used in our calculation
+        if (changeset == null) {
+            // We have no header field to store the new size but our checksum depends on payload, rehash
+            backingBuffer.putShort(offset + IDX_WORD_CHECKSUM, calculateChecksum());
+        }
     }
 
     @Override
