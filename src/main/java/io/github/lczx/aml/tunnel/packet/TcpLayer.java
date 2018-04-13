@@ -16,8 +16,6 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import io.github.lczx.aml.tunnel.packet.editor.LayerEditor;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -26,7 +24,7 @@ import java.util.Set;
 /**
  * A {@link ProtocolLayer} representing the Transport Control Protocol.
  */
-public class TcpLayer extends AbstractProtocolLayer implements TcpHeader {
+public class TcpLayer extends AbstractProtocolLayer<TcpLayerEditor> implements TcpHeader {
 
     // TCP flag masks
     public static final int FLAG_FIN = 0x01;    // FIN: Last packet from sender
@@ -154,14 +152,18 @@ public class TcpLayer extends AbstractProtocolLayer implements TcpHeader {
         return (getFlags() & FLAG_CWR) == FLAG_CWR;
     }
 
+    public short calculateChecksum() {
+        return 0; // TODO: Implement
+    }
+
     @Override
     protected ProtocolLayer<?> buildNextLayer(final int nextOffset) {
         return null;
     }
 
     @Override
-    protected LayerEditor buildEditor(final ByteBuffer bufferView) {
-        return null; // TODO: Implement
+    protected TcpLayerEditor buildEditor(final ByteBuffer bufferView) {
+        return new TcpLayerEditor(this, bufferView);
     }
 
     @Override
