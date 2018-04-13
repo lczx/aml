@@ -21,10 +21,13 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
+import io.github.lczx.aml.tunnel.protocol.udp.UdpHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AMLTunnelService extends VpnService {
+import java.io.IOException;
+
+public class AMLTunnelService extends VpnService implements SocketProtector {
 
     public static final String INTENT_ACTION_KEY = "action";
     public static final int INTENT_ACTION_VALUE_START = 1;
@@ -36,6 +39,8 @@ public class AMLTunnelService extends VpnService {
     private static final String VPN_ROUTE = "0.0.0.0"; // Catch-all
 
     private static boolean isRunning = false;
+
+    private final UdpHandler udpHandler = new UdpHandler();
 
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
@@ -79,6 +84,19 @@ public class AMLTunnelService extends VpnService {
             stopSelf();
         }
 
+        tcpTxPipe = new ConcurrentPacketConnector();
+        udpTxPipe = new ConcurrentPacketConnector();
+        rxPipe = new ConcurrentPacketConnector();
+
+        try {
+            udpHandler.start(this, udpTxPipe, rxPipe);
+        } catch (final IOException e) {
+            LOG.error("Selector initialization failed", e);
+            cleanup();
+            stopSelf();
+            return;
+        }
+
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
 
         vpnThread = new Thread(new TaskRunner("VPN I/O",
@@ -94,6 +112,7 @@ public class AMLTunnelService extends VpnService {
     private void stopVPN() {
         isRunning = false;
         vpnThread.interrupt();
+        udpHandler.shutdown();
 
         cleanup();
     }
@@ -115,7 +134,7 @@ public class AMLTunnelService extends VpnService {
             for (final String packageName : targetPackages) {
                 try {
                     builder.addAllowedApplication(packageName);
-                } catch (PackageManager.NameNotFoundException e) {
+                } catch (final PackageManager.NameNotFoundException e) {
                     LOG.warn("Target application with package \"{}\" not found, ignoring", packageName);
                 }
             }
