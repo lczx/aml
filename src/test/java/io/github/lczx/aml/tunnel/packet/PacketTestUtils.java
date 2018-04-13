@@ -56,7 +56,7 @@ final class PacketTestUtils {
         final ByteBuffer payloadView = ip.getPayloadBufferView();
         assertEquals(0, payloadView.position());
         assertEquals(totalSize - ipHSiz, payloadView.limit());
-        assertEquals(totalSize - ipHSiz, payloadView.limit());
+        assertEquals(totalSize - ipHSiz, payloadView.capacity());
 
         final ByteBuffer payloadEdit = ip.payloadEditor().buffer();
         assertEquals(0, payloadEdit.position());
@@ -107,7 +107,7 @@ final class PacketTestUtils {
 
         // Put a small edit at the beginning of the payload (assuming that it isn't the same content as original)
         final PayloadEditor payloadEditor = transportLayer.payloadEditor();
-        payloadEditor.buffer().putShort((byte) 0x01);
+        payloadEditor.buffer().put((byte) 0x01);
         payloadEditor.commit(); // Without flipping, we don't want to change the limit (and size of the payload)
 
         // Test IP checksum values
