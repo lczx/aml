@@ -97,11 +97,18 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
         if (sizeDelta != 0)
             backingBuffer.limit(backingBuffer.limit() + sizeDelta);
 
-        if (changeset == null) {
+        // In case of header edit with size change we need to invalidate lower layers because the offset changed;
+        // however we also invalidate in case of any payload change (changeset == null).
+        if (sizeDelta != 0 || changeset == null)
             invalidateChildLayers();
-            onPayloadChanged(sizeDelta);
-        }
 
+        // Payload changed, we may need to change size or checksum in header
+        if (changeset == null)
+            onPayloadChanged(sizeDelta);
+
+        // Our child is now invalidated if we edited this layer's payload directly or if our header size changed.
+        // If this was a header edit, we need to rebuild our child layers now to give them a chance to maintain
+        // integrity, otherwise if it was a payload edit, we don't do nothing because it was a deliberate raw change.
         if (changeset != null) {
             getNextLayer(); // Rebuild that now
             if (nextLayer != null) nextLayer.onParentHeaderChanged(this, changeset);

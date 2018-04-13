@@ -120,10 +120,4 @@ public abstract class RelocatingLayerEditor<T extends ProtocolLayer, E extends R
         }
     }
 
-    private static class RelocationException extends IllegalStateException {
-        private RelocationException(String s) {
-            super(s);
-        }
-    }
-
 }
