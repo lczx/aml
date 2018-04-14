@@ -43,16 +43,21 @@ final class LayerFactory {
 
     private static class NetworkLayerDetector implements LayerDetector {
         @Override
-        public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
+        public ProtocolLayer<?> detectLayer(final ProtocolLayer<?> parent, final ByteBuffer buffer, final int offset) {
             if ((buffer.get(offset) & 0xF0) == 0x40)
                 return new IPv4Layer(parent, buffer, offset);
             throw new LayerDetectException("Cannot determine network layer type");
+        }
+
+        @Override
+        public int getMinimumSafeSizeForChild(final ProtocolLayer<?> parent) {
+            return IPv4Layer.IDX_BLOB_OPTIONS;
         }
     }
 
     private static class TransportLayerDetector implements LayerDetector {
         @Override
-        public ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset) {
+        public ProtocolLayer<?> detectLayer(final ProtocolLayer<?> parent, final ByteBuffer buffer, final int offset) {
             final short protoId = ((IPv4Layer) parent).getProtocolId();
             switch (protoId) {
                 case IPv4Layer.PROTOCOL_TCP:
@@ -69,10 +74,30 @@ final class LayerFactory {
                     return null;
             }
         }
+
+        @Override
+        public int getMinimumSafeSizeForChild(ProtocolLayer<?> parent) {
+            final short protoId = ((IPv4Layer) parent).getProtocolId();
+            switch (protoId) {
+                case IPv4Layer.PROTOCOL_TCP:
+                    return TcpLayer.IDX_BLOB_OPTIONS;
+                case IPv4Layer.PROTOCOL_UDP:
+                    return UdpLayer.HEADER_SIZE;
+                case IPv4Layer.PROTOCOL_ICMP:
+                    LOG.info("Requested min. safe size for an ICMP layer " +
+                            "(which is not yet implemented), treating as data (ret. 0)");
+                    return 0;
+                default:
+                    LOG.warn("Unknown IPv4 protocol ID ({}), treating as data (min. safe size = 0)", protoId);
+                    return 0;
+            }
+        }
     }
 
     public interface LayerDetector {
-        ProtocolLayer detectLayer(ProtocolLayer parent, ByteBuffer buffer, int offset);
+        ProtocolLayer<?> detectLayer(ProtocolLayer<?> parent, ByteBuffer buffer, int offset);
+
+        int getMinimumSafeSizeForChild(ProtocolLayer<?> parent);
     }
 
     private static class LayerDetectException extends RuntimeException {

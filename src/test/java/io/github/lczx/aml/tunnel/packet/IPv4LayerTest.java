@@ -16,7 +16,9 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
+import io.github.lczx.aml.tunnel.packet.buffer.ByteBufferPool;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
+import io.github.lczx.aml.tunnel.packet.editor.RelocationException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -29,6 +31,8 @@ import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.RANDOM;
 import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.checkBufferSlices;
 import static io.github.lczx.aml.tunnel.packet.PacketTestUtils.dumpBuffer;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeNoException;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
@@ -94,6 +98,32 @@ public class IPv4LayerTest {
     @Test
     public void bufferSliceTest() {
         checkBufferSlices(packet, packetRaw.length, null);
+    }
+
+    @Test
+    public void optionsArgumentTest() {
+        try {
+            ip.editor().setOptions(new byte[44]).commit();
+            fail("IP header should not accept options longer than 40 bytes");
+        } catch (final IllegalArgumentException e) { /* ignore */ }
+        try {
+            ip.editor().setOptions(new byte[38]).commit();
+            fail("IP header should not accept options not multiple of 4");
+        } catch (final IllegalArgumentException e) { /* ignore */ }
+    }
+
+    @Test
+    public void optionsFillTest() {
+        checkOptions(40);
+    }
+
+    @Test
+    public void optionsRandomAndClearTest() {
+        //List<Integer> optsLenSequence = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        //Collections.shuffle(optsLenSequence, RANDOM);
+        //for (int len : optsLenSequence) checkOptions(4 * len);
+        checkOptions(RANDOM.nextInt(11) * 4);
+        checkOptions(0);
     }
 
     @Test
@@ -168,6 +198,88 @@ public class IPv4LayerTest {
 
         // Check backing buffer limit (backing buffer pointers are preserved to the view without need to detach)
         assertEquals(newTotalSize, packet.getBufferView().limit());
+    }
+
+    private void checkOptions(final int newOptsLen) {
+        final byte[] options = ip.getOptions();
+        final int optsLen = options == null ? 0 : options.length;
+        assertEquals("Options length should be multiple of 4 bytes", 0, optsLen % 4);
+        final byte[] newOpts = new byte[newOptsLen];
+        RANDOM.nextBytes(newOpts);
+        assumeFalse("Our dummy options are the same as original (-_-)", Arrays.equals(options, newOpts));
+
+        final ProtocolLayer<?> nextLayer = ip.getNextLayer();
+        final int headerSize = ip.getHeaderSize();
+        final int payloadSize = ip.getPayloadSize();
+        final int totalSize = ip.getTotalSize();
+        final short checksum = ip.getHeaderChecksum();
+        final byte[] prevPayload = dumpBuffer(ip.getPayloadBufferView());
+
+        final int bufferLimit = packet.getBufferView().limit();
+        if (newOptsLen > ByteBufferPool.BUFFER_SIZE - bufferLimit) {
+            try {
+                ip.editor().setOptions(newOpts).commit();
+                fail("Commit operation should have thrown: buffer overflow due to options too large");
+            } catch (final RelocationException e) {
+                // Checksum, size & payload should not have changed
+                assertEquals(checksum, ip.getHeaderChecksum());
+                assertEquals(totalSize, ip.getTotalSize());
+                assertArrayEquals(prevPayload, dumpBuffer(ip.getPayloadBufferView()));
+                assumeNoException("Random parameter would give buffer overflow, packet unchanged (as planned)", e);
+            }
+        }
+
+        ip.editor().setOptions(newOpts).commit();
+        final int sizeDelta = newOptsLen - optsLen;
+        final byte[] newOptsRet = newOpts.length != 0 ? newOpts : null; // <-- as returned by getOptions()
+
+        // Next layer equality should fail
+        if (sizeDelta != 0 && nextLayer != null)
+            assertNotSame("Next layer should be rebuilt after a payload relocation",
+                    nextLayer, ip.getNextLayer());
+
+        // Check if total length and IHL changed
+        assertEquals(headerSize + sizeDelta, ip.getHeaderSize());
+        assertEquals(payloadSize, ip.getPayloadSize());
+        assertEquals(totalSize + sizeDelta, ip.getTotalSize());
+
+        // Checksum should have changed (if size actually changed, or if not, the options are not the same)
+        if (sizeDelta != 0 || !Arrays.equals(options, newOptsRet))
+            assertNotEquals(checksum, ip.getHeaderChecksum());
+
+        // Options are actually changed
+        assertArrayEquals(newOptsRet, ip.getOptions());
+
+        // Buffer limit should match
+        assertEquals(bufferLimit + sizeDelta, packet.getBufferView().limit());
+
+        // Check consistency of views
+        final ByteBuffer layerView = ip.getBufferView();
+        assertEquals(ip.getTotalSize(), layerView.limit());
+        assertEquals(ip.getTotalSize(), layerView.capacity());
+        final ByteBuffer payloadView = ip.getPayloadBufferView();
+        assertEquals(ip.getPayloadSize(), payloadView.limit());
+        assertEquals(ip.getPayloadSize(), payloadView.capacity());
+
+        // Payload should not have changed
+        assertArrayEquals("Payload should not have changed",
+                prevPayload, dumpBuffer(ip.getPayloadBufferView()));
+
+        // Final comprehensive integrity test
+        assertEquals(ip.getHeaderChecksum(), ip.calculateChecksum());
+        final byte[] rawOpts = new byte[newOptsLen];
+        final byte[] rawPayload = new byte[payloadSize];
+        final ByteBuffer rawPacket = packet.detachBuffer();
+        rawPacket.position(IPv4Layer.IDX_BLOB_OPTIONS);
+        rawPacket.get(rawOpts);
+        rawPacket.get(rawPayload);
+        assertEquals(0, rawPacket.remaining());
+        assertArrayEquals(newOpts, rawOpts);
+        assertArrayEquals(prevPayload, rawPayload);
+
+        // Reattach the buffer to allow further testing
+        rawPacket.rewind();
+        packet.attachBuffer(Packets.LAYER_NETWORK, rawPacket);
     }
 
 }

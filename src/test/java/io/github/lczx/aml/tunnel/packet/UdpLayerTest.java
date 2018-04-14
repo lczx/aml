@@ -157,4 +157,9 @@ public class UdpLayerTest {
         assertEquals(newTotalSize, packet.getBufferView().limit());
     }
 
+    @Test
+    public void ipOptionsChangeTest() {
+        checkIpOptionsChange(packet, UdpLayer.class);
+    }
+
 }
