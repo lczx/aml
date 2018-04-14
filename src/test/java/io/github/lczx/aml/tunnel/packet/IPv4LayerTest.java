@@ -105,11 +105,11 @@ public class IPv4LayerTest {
         try {
             ip.editor().setOptions(new byte[44]).commit();
             fail("IP header should not accept options longer than 40 bytes");
-        } catch (IllegalArgumentException e) { /* ignore */ }
+        } catch (final IllegalArgumentException e) { /* ignore */ }
         try {
             ip.editor().setOptions(new byte[38]).commit();
             fail("IP header should not accept options not multiple of 4");
-        } catch (IllegalArgumentException e) { /* ignore */ }
+        } catch (final IllegalArgumentException e) { /* ignore */ }
     }
 
     @Test
@@ -203,7 +203,7 @@ public class IPv4LayerTest {
     private void checkOptions(final int newOptsLen) {
         final byte[] options = ip.getOptions();
         final int optsLen = options == null ? 0 : options.length;
-        assertTrue("Options length should be multiple of 4 bytes", optsLen % 4 == 0);
+        assertEquals("Options length should be multiple of 4 bytes", 0, optsLen % 4);
         final byte[] newOpts = new byte[newOptsLen];
         RANDOM.nextBytes(newOpts);
         assumeFalse("Our dummy options are the same as original (-_-)", Arrays.equals(options, newOpts));
@@ -220,7 +220,7 @@ public class IPv4LayerTest {
             try {
                 ip.editor().setOptions(newOpts).commit();
                 fail("Commit operation should have thrown: buffer overflow due to options too large");
-            } catch (RelocationException e) {
+            } catch (final RelocationException e) {
                 // Checksum, size & payload should not have changed
                 assertEquals(checksum, ip.getHeaderChecksum());
                 assertEquals(totalSize, ip.getTotalSize());
