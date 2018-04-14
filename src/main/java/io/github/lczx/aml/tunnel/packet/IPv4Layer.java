@@ -169,6 +169,11 @@ public class IPv4Layer extends AbstractProtocolLayer<IPv4LayerEditor> implements
     }
 
     @Override
+    protected int buildNextLayerMinimumSize() {
+        return LayerFactory.getFactory(Packets.LAYER_TRANSPORT).getMinimumSafeSizeForChild(this);
+    }
+
+    @Override
     protected IPv4LayerEditor buildEditor(final ByteBuffer bufferView) {
         return new IPv4LayerEditor(this, bufferView);
     }

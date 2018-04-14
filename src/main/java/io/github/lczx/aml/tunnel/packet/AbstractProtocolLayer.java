@@ -48,7 +48,7 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
 
     @Override
     public ProtocolLayer<?> getNextLayer() {
-        if (nextLayer == null)
+        if (nextLayer == null && canBuildNextLayer())
             nextLayer = buildNextLayer(offset + getHeaderSize());
         return nextLayer;
     }
@@ -141,6 +141,21 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
      */
     protected abstract ProtocolLayer<?> buildNextLayer(int nextOffset);
 
+    /**
+     * Returns the minimum payload size required to build the next layer.
+     *
+     * <p> If the current {@link #getPayloadSize()} is less than this value, construction of the next layer will not
+     * be allowed and {@link #getNextLayer()} will return {@link null}.
+     *
+     * <p> Since child layers are automatically generated and notified of changes to this layer
+     * (via {@link #onParentHeaderChanged(ProtocolLayer, LayerChangeset)}), this provides a safe way to abort this
+     * mechanism if the child would not be able to access its fields.
+     *
+     * @return The minimum payload size required to call {@link #buildNextLayer(int)}
+     */
+    protected int buildNextLayerMinimumSize() {
+        return 0;
+    }
 
     /**
      * Builds an editor for this layer with the given buffer.
@@ -161,6 +176,15 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
      * @see #onEditorCommit(LayerChangeset, int)  The note in the documentation of onEditorCommit(LayerChangeset, int)
      */
     protected void onPayloadChanged(final int sizeDelta) { }
+
+    private boolean canBuildNextLayer() {
+        // To allow the creation of the next layer, the following conditions must be met:
+        // - Our payload is greater than the minimum safe next layer size, as provided by buildNextLayerMinimumSize()
+        // - There must be at least as much allocated space in the buffer (by limit) to hold the
+        //   declared (as in header) payload of this layer (i.e. limit - offset - headerSz >= payloadSz)
+        final int effectiveTotalSize = backingBuffer.limit() - offset;
+        return getPayloadSize() >= buildNextLayerMinimumSize() && getTotalSize() <= effectiveTotalSize;
+    }
 
     private ByteBuffer makeBufferView(final int offset, final int size) {
         final ByteBuffer view = backingBuffer.duplicate();
