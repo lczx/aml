@@ -73,7 +73,7 @@ public final class Packets {
      * @param toCopy The packet to clone
      * @return A copy of the given packet
      */
-    public static Packet makeCopy(Packet toCopy) {
+    public static Packet makeCopy(final Packet toCopy) {
         return wrapBuffer(toCopy.getTopLayerType(), ((ByteBuffer) createBuffer().put(toCopy.getBufferView()).flip()));
     }
 

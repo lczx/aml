@@ -105,12 +105,22 @@ public interface ProtocolLayer<E extends LayerEditor> {
     ByteBuffer getPayloadBufferView();
 
     /**
+     * Called by parent layers to notify this layer of changes in their header.
+     *
+     * <p> <i>Use case: The IP layer can notify TCP to regenerate its pseudo-header and recalculate checksum.</i>
+     *
+     * @param layer     The layer that changed
+     * @param changeset The changeset committed to the layer's header
+     */
+    void onParentHeaderChanged(ProtocolLayer<?> layer, LayerChangeset changeset);
+
+    /**
      * Called by children layers to notify this layer of changes in their content.
      *
      * <p> <i>Use case: An application-level layer can notify the TCP layer to update its checksum.</i>
      *
      * @param layer     The layer that changed
-     * @param changeset The change set committed to the layer's header or {@code null} if it was a payload edit
+     * @param changeset The changeset committed to the layer's header or {@code null} if it was a payload edit
      * @param sizeDelta The difference in size from before the edit
      */
     void onChildLayerChanged(ProtocolLayer<?> layer, LayerChangeset changeset, int sizeDelta);
@@ -121,7 +131,7 @@ public interface ProtocolLayer<E extends LayerEditor> {
      * <p> <b>Important note:</b> Payload editors cannot make changes to the header of the layer; if this call was
      * originated from a payload edit ({@code changeSet} is null) you must change the appropriate size fields manually.
      *
-     * @param changeset The change set committed to the layer's header or {@code null} if it was a payload edit
+     * @param changeset The changeset committed to the layer's header or {@code null} if it was a payload edit
      * @param sizeDelta The difference in size from before the edit (in bytes)
      */
     void onEditorCommit(LayerChangeset changeset, int sizeDelta);
