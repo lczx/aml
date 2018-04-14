@@ -21,6 +21,7 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpHandler;
 import io.github.lczx.aml.tunnel.protocol.udp.UdpHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private static boolean isRunning = false;
 
     private final UdpHandler udpHandler = new UdpHandler();
+    private final TcpHandler tcpHandler = new TcpHandler();
 
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
@@ -89,6 +91,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         rxPipe = new ConcurrentPacketConnector();
 
         try {
+            tcpHandler.start(this, tcpTxPipe, rxPipe);
             udpHandler.start(this, udpTxPipe, rxPipe);
         } catch (final IOException e) {
             LOG.error("Selector initialization failed", e);
@@ -112,6 +115,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private void stopVPN() {
         isRunning = false;
         vpnThread.interrupt();
+        tcpHandler.shutdown();
         udpHandler.shutdown();
 
         cleanup();

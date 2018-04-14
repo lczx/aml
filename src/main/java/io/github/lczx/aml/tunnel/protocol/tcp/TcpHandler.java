@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.PacketSink;
@@ -26,9 +26,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.channels.Selector;
 
-public class UdpHandler {
+public class TcpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UdpHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpHandler.class);
+
+    private final SessionRegistry sessionRegistry = new SessionRegistry();
 
     private Selector networkSelector;
     private Thread txTread;
@@ -37,8 +39,8 @@ public class UdpHandler {
     public void start(final SocketProtector socketProtector,
                       final PacketSource pSrc, final PacketSink pDst) throws IOException {
         networkSelector = Selector.open();
-        txTread = new Thread(new UdpTransmitter(networkSelector, pSrc, socketProtector));
-        rxThread = new Thread(new UdpReceiver(networkSelector, pDst));
+        txTread = new Thread(new TcpTransmitter(networkSelector, pSrc, pDst, socketProtector, sessionRegistry));
+        rxThread = new Thread(new TcpReceiver(networkSelector, pDst, sessionRegistry));
         txTread.start();
         rxThread.start();
     }
@@ -47,6 +49,8 @@ public class UdpHandler {
         txTread.interrupt();
         rxThread.interrupt();
         IOUtils.closeResources(networkSelector);
+
+        // TODO: Clear session registry?
 
         txTread = null;
         rxThread = null;
