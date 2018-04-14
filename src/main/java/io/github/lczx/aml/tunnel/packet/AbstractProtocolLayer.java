@@ -22,6 +22,12 @@ import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
 
 import java.nio.ByteBuffer;
 
+/**
+ * A {@link ProtocolLayer} abstraction utility, providing a common implementation of redundant size getters, child
+ * layer cache management, parent-child relationships, editor commit behavior and view providers.
+ *
+ * @param <E> The layer editor class for the implementing layer
+ */
 public abstract class AbstractProtocolLayer<E extends LayerEditor> implements ProtocolLayer<E> {
 
     protected final ByteBuffer backingBuffer;
@@ -118,14 +124,42 @@ public abstract class AbstractProtocolLayer<E extends LayerEditor> implements Pr
         if (parentLayer != null) parentLayer.onChildLayerChanged(this, changeset, sizeDelta);
     }
 
+    /**
+     * Invalidates the following layers in the chain.
+     */
     protected void invalidateChildLayers() {
         nextLayer = null;
     }
 
+    /**
+     * Builds the next protocol layer of the chain.
+     *
+     * <p> The result of this method is cached; the value is discarded by a call to {@link #invalidateChildLayers()}.
+     *
+     * @param nextOffset The buffer offset of the next layer
+     * @return The layer detected from the payload of this one
+     */
     protected abstract ProtocolLayer<?> buildNextLayer(int nextOffset);
 
+
+    /**
+     * Builds an editor for this layer with the given buffer.
+     *
+     * @param bufferView The slice of this packet's backing buffer (from the start of
+     *                   this layer to the end of the buffer) used to create the editor
+     * @return The built editor
+     */
     protected abstract E buildEditor(ByteBuffer bufferView);
 
+    /**
+     * Called by the {@link #onEditorCommit(LayerChangeset, int)} implementation of {@link AbstractProtocolLayer}
+     * when a payload commit is detected.
+     *
+     * <p> Implementations should update their size and/or checksum in the header when this method is called.
+     *
+     * @param sizeDelta The change in size of the payload
+     * @see #onEditorCommit(LayerChangeset, int)  The note in the documentation of onEditorCommit(LayerChangeset, int)
+     */
     protected void onPayloadChanged(final int sizeDelta) { }
 
     private ByteBuffer makeBufferView(final int offset, final int size) {
