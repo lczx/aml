@@ -16,33 +16,33 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-import io.github.lczx.aml.tunnel.packet.editor.LayerEditorBase;
+import io.github.lczx.aml.tunnel.packet.editor.RelocatingLayerEditor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static io.github.lczx.aml.tunnel.packet.TcpLayer.*;
 
 /**
  * Editor for {@link TcpLayer}.
  */
-public class TcpLayerEditor extends LayerEditorBase<TcpLayerEditor> {
+public class TcpLayerEditor extends RelocatingLayerEditor<TcpLayer, TcpLayerEditor> {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpLayerEditor.class);
-
-    private final TcpLayer protocolLayer;
+    private static final int MAX_HEADER_SIZE = 0x0F << 2; // Max. data offset is 1111b, max header size is 60 bytes
 
     TcpLayerEditor(final TcpLayer protocolLayer, final ByteBuffer targetBuffer) {
-        super(targetBuffer);
-        this.protocolLayer = protocolLayer;
+        super(protocolLayer, targetBuffer, IDX_BLOB_OPTIONS);
     }
 
     @Override
     public void commit() {
+        final int sizeDelta = processVariableSizeEdits();
         super.commit();
-        LOG.trace("TCP header change committed");
-        protocolLayer.onEditorCommit(changeset, 0);
+        LOG.trace("TCP header change committed (size delta: {} bytes)", sizeDelta);
+        protocolLayer.onEditorCommit(changeset, sizeDelta);
 
         // Update checksum after onEditorCommit: this.getTotalSize() (used for checksum calculation)
         // is calculated from the IP header, which is updated in onEditorCommit(), so let it update its fields first.
@@ -140,8 +140,25 @@ public class TcpLayerEditor extends LayerEditorBase<TcpLayerEditor> {
      * @return This editor
      */
     public TcpLayerEditor setOptions(byte[] options) {
-        // TODO: Implement
+        if (Arrays.equals(protocolLayer.getOptions(), options)) return this;
+        if (options != null) {
+            if (options.length % 4 != 0)
+                throw new IllegalArgumentException("Options length must be multiple of 4");
+            final int maxOptSize = MAX_HEADER_SIZE - IDX_BLOB_OPTIONS;
+            if (options.length > maxOptSize)
+                throw new IllegalArgumentException("Options must not be longer than " + maxOptSize + " bytes");
+        } else {
+            options = new byte[]{};
+        }
+        changeset.putEdit(IDX_BLOB_OPTIONS, options);
         return this;
+    }
+
+    @Override
+    protected void onHeaderSizeChanged(final int newHeaderSize, final int payloadSize) {
+        final int reservedBits = targetBuffer.get(IDX_BYTE_DATA_OFFSET_AND_RESERVED) & 0x0F;
+        changeset.putEdit(IDX_BYTE_DATA_OFFSET_AND_RESERVED,
+                (byte) (newHeaderSize >> 2 << 4 | reservedBits));
     }
 
 }
