@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.protocol;
 
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
-import io.github.lczx.aml.tunnel.protocol.ProtocolTestUtils;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 
-public class TcpHandlerTest {
+public class TcpProtocolTest {
 
     static {
         final Properties props = System.getProperties();
@@ -45,7 +45,7 @@ public class TcpHandlerTest {
         props.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(TcpHandlerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpProtocolTest.class);
 
     private static final int STD_HTTP_PORT = 80;
     private static final String HTTP_HOST = "example.com";
@@ -54,14 +54,16 @@ public class TcpHandlerTest {
             new byte[]{0x02, 0x04, 0x05, (byte) 0xb4, 0x01, 0x03, 0x03, 0x08, 0x01, 0x01, 0x04, 0x02};
     private static final int TIMEOUT_MS = 200;
 
-    private final TcpHandler tcpHandler = new TcpHandler();
+    private final TcpNetworkInterface tcpNetworkInterface;
     private final ConcurrentLinkedQueue<Packet> networkSink = new ConcurrentLinkedQueue<>();
     private final LinkedBlockingQueue<Packet> networkSource = new LinkedBlockingQueue<>();
 
-    public TcpHandlerTest() throws IOException {
-        tcpHandler.start(new ProtocolTestUtils.DummySocketProtector(),
+    public TcpProtocolTest() throws IOException {
+        tcpNetworkInterface = new TcpNetworkInterface(
+                new ProtocolTestUtils.DummySocketProtector(),
                 new ProtocolTestUtils.PacketConnector(networkSink),
                 new ProtocolTestUtils.PacketConnector(networkSource));
+        tcpNetworkInterface.start();
     }
 
     @Test
@@ -182,7 +184,7 @@ public class TcpHandlerTest {
         LOG.info("FAAK\t{}", pFinAckAck);
         networkSink.offer(pFinAckAck);
         Thread.sleep(20);
-        tcpHandler.shutdown();
+        tcpNetworkInterface.shutdown();
     }
 
     private static void checkEndpoints(final Packet packet,

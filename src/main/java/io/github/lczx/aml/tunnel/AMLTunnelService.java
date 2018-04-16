@@ -21,8 +21,9 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpHandler;
-import io.github.lczx.aml.tunnel.protocol.udp.UdpHandler;
+import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
+import io.github.lczx.aml.tunnel.protocol.udp.UdpNetworkInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,47 +31,48 @@ import java.io.IOException;
 
 public class AMLTunnelService extends VpnService implements SocketProtector {
 
-    public static final String INTENT_ACTION_KEY = "action";
-    public static final int INTENT_ACTION_VALUE_START = 1;
-    public static final int INTENT_ACTION_VALUE_STOP = 2;
-    public static final String INTENT_TARGET_PACKAGES_KEY = "targetPackages";
+    public static final String ACTION_START = "aml.tunnel.intent.action.SERVICE_START";
+    public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";
+    public static final String EXTRA_TARGET_PACKAGES = "aml.tunnel.intent.extra.TARGET_NAMES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
     private static final String VPN_ADDRESS = "10.0.8.2"; // IPv4 only
     private static final String VPN_ROUTE = "0.0.0.0"; // Catch-all
 
-    private static boolean isRunning = false;
-
-    private final UdpHandler udpHandler = new UdpHandler();
-    private final TcpHandler tcpHandler = new TcpHandler();
-
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
 
-    private Thread vpnThread;
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
+    private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
+    private Thread vpnThread;
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
-        switch (intent.getIntExtra(INTENT_ACTION_KEY, -1)) {
-            case INTENT_ACTION_VALUE_START:
-                targetPackages = intent.getStringArrayExtra(INTENT_TARGET_PACKAGES_KEY);
+        // We could use onCreate/onDestroy to initialize/stop the VPN but then we wouldn't have access to intent params
+        if (intent.getAction() == null) {
+            LOG.warn("Service started without an action parameter");
+            return START_NOT_STICKY;
+        }
+
+        switch (intent.getAction()) {
+            case ACTION_START:
+                targetPackages = intent.getStringArrayExtra(EXTRA_TARGET_PACKAGES);
                 startVPN();
                 break;
-            case INTENT_ACTION_VALUE_STOP:
-                stopVPN();
+            case ACTION_STOP:
+                // Equivalent of stopService()
                 stopSelf();
-                //stopService(new Intent(this, AMLTunnelService.class));
                 break;
             default:
-                LOG.warn("Service started with unknown action number");
-                break;
+                LOG.warn("Service received an unknown action command");
+                return START_NOT_STICKY;
         }
         return START_STICKY;
     }
 
     @Override
     public void onRevoke() {
+        LOG.info("Service revoked by system");
         super.onRevoke();
     }
 
@@ -90,34 +92,30 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
 
-        try {
-            tcpHandler.start(this, tcpTxPipe, rxPipe);
-            udpHandler.start(this, udpTxPipe, rxPipe);
-        } catch (final IOException e) {
-            LOG.error("Selector initialization failed", e);
-            cleanup();
-            stopSelf();
-            return;
-        }
+        tcpNetworkInterface = new TcpNetworkInterface(this, tcpTxPipe, rxPipe);
+        udpNetworkInterface = new UdpNetworkInterface(this, udpTxPipe, rxPipe);
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
-
         vpnThread = new Thread(new TaskRunner("VPN I/O",
                 new TunUplinkReader(vpnInterface.getFileDescriptor(), dispatcher),
                 new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)));
 
-        // TODO: Do something with these pipes
-
-        vpnThread.start();
-        isRunning = true;
+        try {
+            tcpNetworkInterface.start();
+            udpNetworkInterface.start();
+            vpnThread.start();
+        } catch (final IOException e) {
+            LOG.error("Selector initialization failed", e);
+            cleanup();
+            stopSelf();
+            //return;
+        }
     }
 
     private void stopVPN() {
-        isRunning = false;
         vpnThread.interrupt();
-        tcpHandler.shutdown();
-        udpHandler.shutdown();
-
+        tcpNetworkInterface.shutdown();
+        udpNetworkInterface.shutdown();
         cleanup();
     }
 
@@ -125,8 +123,11 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         tcpTxPipe = null;
         udpTxPipe = null;
         rxPipe = null;
+        tcpNetworkInterface = null;
+        udpNetworkInterface = null;
         // TODO: Clear buffer pool when implemented
         IOUtils.closeResources(vpnInterface);
+        vpnInterface = null;
     }
 
     private ParcelFileDescriptor initializeInterface() {
