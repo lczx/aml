@@ -20,6 +20,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.AMLContextImpl;
+import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
+import io.github.lczx.aml.hook.monitoring.MeasureHolder;
+import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
 import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
 import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
@@ -41,6 +46,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
+
+    private AMLContext amlContext;
 
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
     private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
@@ -88,6 +95,9 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             stopSelf();
         }
 
+        amlContext = new AMLContextImpl(this);
+        amlContext.getStatusMonitor().attachProbe(new ServiceProbe());
+
         tcpTxPipe = new ConcurrentPacketConnector();
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
@@ -128,6 +138,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         // TODO: Clear buffer pool when implemented
         IOUtils.closeResources(vpnInterface);
         vpnInterface = null;
+        amlContext = null;
     }
 
     private ParcelFileDescriptor initializeInterface() {
@@ -149,6 +160,16 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         } catch (final IllegalStateException e) {
             LOG.error("Cannot establish tunnel", e);
             return null;
+        }
+    }
+
+    private class ServiceProbe implements StatusProbe {
+        @Override
+        public void onMeasure(final MeasureHolder m) {
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_RX, rxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_TX_TCP, tcpTxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_TX_UDP, udpTxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.THREAD_STATE_VPN, vpnThread.getState().ordinal());
         }
     }
 
