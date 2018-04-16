@@ -102,8 +102,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
 
-        tcpNetworkInterface = new TcpNetworkInterface(this, tcpTxPipe, rxPipe);
-        udpNetworkInterface = new UdpNetworkInterface(this, udpTxPipe, rxPipe);
+        tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
+        udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",

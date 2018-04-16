@@ -16,36 +16,53 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
+import io.github.lczx.aml.hook.monitoring.MeasureHolder;
+import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
-import io.github.lczx.aml.tunnel.SocketProtector;
 import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
 
+import java.io.IOException;
 import java.nio.channels.Selector;
 
 public class TcpNetworkInterface extends ProtocolNetworkInterface {
 
-    // TODO: Override shutdown to clear session registry?
-
-    private final SessionRegistry sessionRegistry = new SessionRegistry();
-    private final SocketProtector socketProtector;
+    private final SessionRegistry sessionRegistry;
+    private final AMLContext amlContext;
     private final PacketSource packetSource;
     private final PacketSink packetDestination;
 
-    public TcpNetworkInterface(final SocketProtector socketProtector, final PacketSource pSrc, final PacketSink pDst) {
-        this.socketProtector = socketProtector;
+    public TcpNetworkInterface(final AMLContext amlContext, final PacketSource pSrc, final PacketSink pDst) {
+        this.sessionRegistry = new SessionRegistry(amlContext);
+        this.amlContext = amlContext;
         this.packetSource = pSrc;
         this.packetDestination = pDst;
     }
 
     @Override
+    public void start() throws IOException {
+        super.start();
+        amlContext.getStatusMonitor().attachProbe(new TcpProbe());
+    }
+
+    @Override
     protected Runnable createTransmitterRunnable(final Selector networkSelector) {
-        return new TcpTransmitter(networkSelector, packetSource, packetDestination, socketProtector, sessionRegistry);
+        return new TcpTransmitter(networkSelector, packetSource, packetDestination, sessionRegistry, amlContext);
     }
 
     @Override
     protected Runnable createReceiverRunnable(final Selector networkSelector) {
         return new TcpReceiver(networkSelector, packetDestination, sessionRegistry);
+    }
+
+    private class TcpProbe implements StatusProbe {
+        @Override
+        public void onMeasure(final MeasureHolder m) {
+            m.putInt(BaseMeasureKeys.THREAD_STATE_TCP_TX, txThread.getState().ordinal());
+            m.putInt(BaseMeasureKeys.THREAD_STATE_TCP_RX, rxThread.getState().ordinal());
+        }
     }
 
 }
