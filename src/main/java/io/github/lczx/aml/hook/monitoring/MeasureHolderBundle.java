@@ -26,6 +26,10 @@ public class MeasureHolderBundle implements MeasureHolder {
         this.bundle = bundle;
     }
 
+    public Bundle getBundle() {
+        return bundle;
+    }
+
     @Override
     public void putInt(final String key, final int value) {
         bundle.putInt(key, value);
