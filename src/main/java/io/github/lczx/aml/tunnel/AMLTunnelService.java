@@ -47,6 +47,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private static final String VPN_ADDRESS = "10.0.8.2"; // IPv4 only
     private static final String VPN_ROUTE = "0.0.0.0"; // Catch-all
 
+    private static boolean isActive = false;
+
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
 
@@ -55,6 +57,24 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
     private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
     private Thread vpnThread;
+
+    /**
+     * {@code true} if an instance of this service has been created.
+     *
+     * <p> This condition yields true even when  the tunnel itself is not started with an explicit intent, the
+     * service is bound for monitoring with {@link android.content.Context#BIND_AUTO_CREATE Context.BIND_AUTO_CREATE}
+     * or the engine failed in an unexpected way.
+     */
+    public static boolean isActive() {
+        return isActive;
+    }
+
+    @Override
+    public void onCreate() {
+        LOG.debug("Service created");
+        super.onCreate();
+        isActive = true;
+    }
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
@@ -101,6 +121,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     @Override
     public void onDestroy() {
         stopVPN();
+        isActive = false;
+        LOG.debug("Service destroyed");
     }
 
     private void startVPN() {
