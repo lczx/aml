@@ -19,6 +19,8 @@ package io.github.lczx.aml.tunnel;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.os.Binder;
+import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.AMLContextImpl;
@@ -38,6 +40,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     public static final String ACTION_START = "aml.tunnel.intent.action.SERVICE_START";
     public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";
+    public static final String ACTION_BIND_MONITORING = "aml.tunnel.intent.action.BIND_MONITORING";
     public static final String EXTRA_TARGET_PACKAGES = "aml.tunnel.intent.extra.TARGET_NAMES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
@@ -77,6 +80,16 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
                 return START_NOT_STICKY;
         }
         return START_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(final Intent intent) {
+        LOG.debug("Binding intent received: {}", intent);
+        if (intent != null && ACTION_BIND_MONITORING.equals(intent.getAction())) {
+            LOG.info("Requested AMLContext binding for monitoring");
+            return new ContextBinding();
+        }
+        return super.onBind(intent);
     }
 
     @Override
@@ -165,6 +178,12 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         } catch (final IllegalStateException e) {
             LOG.error("Cannot establish tunnel", e);
             return null;
+        }
+    }
+
+    public class ContextBinding extends Binder {
+        public AMLContext getTunnelContext() {
+            return amlContext;
         }
     }
 
