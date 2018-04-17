@@ -31,7 +31,7 @@ public final class IOUtils {
     public static void closeResources(final Closeable... resources) {
         for (final Closeable resource : resources) {
             try {
-                resource.close();
+                if (resource != null) resource.close();
             } catch (final IOException e) {
                 LOG.error("I/O exception while closing " + resource, e);
             }

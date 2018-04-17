@@ -60,7 +60,7 @@ public class TcpProtocolTest {
 
     public TcpProtocolTest() throws IOException {
         tcpNetworkInterface = new TcpNetworkInterface(
-                new ProtocolTestUtils.DummySocketProtector(),
+                new ProtocolTestUtils.DummyContext(),
                 new ProtocolTestUtils.PacketConnector(networkSink),
                 new ProtocolTestUtils.PacketConnector(networkSource));
         tcpNetworkInterface.start();

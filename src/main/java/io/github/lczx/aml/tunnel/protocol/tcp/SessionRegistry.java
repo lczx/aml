@@ -16,9 +16,14 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
+import io.github.lczx.aml.hook.monitoring.MeasureHolder;
+import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.protocol.udp.LruCache;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -34,19 +39,23 @@ public class SessionRegistry {
         }
     });
 
-    public Connection getConnection(final String key) {
+    /* package */ SessionRegistry(final AMLContext amlContext) {
+        amlContext.getStatusMonitor().attachProbe(new TcpSessionProbe());
+    }
+
+    /* package */ Connection getConnection(final String key) {
         synchronized (connCache) {
             return connCache.get(key);
         }
     }
 
-    public void putConnection(final Connection connection) {
+    /* package */ void putConnection(final Connection connection) {
         synchronized (connCache) {
             connCache.put(connection.getRegistryKey(), connection);
         }
     }
 
-    public void closeConnection(final Connection connection) {
+    /* package */ void closeConnection(final Connection connection) {
         // TODO: Place here connection closed hook
         connection.closeUpstreamChannel();
         synchronized (connCache) {
@@ -54,7 +63,7 @@ public class SessionRegistry {
         }
     }
 
-    public void closeAll() {
+    /* package */ void closeAll() {
         synchronized (connCache) {
             final Iterator<Map.Entry<String, Connection>> it = connCache.entrySet().iterator();
             while (it.hasNext()) {
@@ -72,8 +81,21 @@ public class SessionRegistry {
     }
 
     // TODO: Fix nice code duplication from UDP transmitter
-    public static String buildKey(final InetSocketAddress destination, final int sourcePort) {
+    /* package */ static String buildKey(final InetSocketAddress destination, final int sourcePort) {
         return destination.getAddress().getHostAddress() + ':' + destination.getPort() + ':' + sourcePort;
+    }
+
+    private class TcpSessionProbe implements StatusProbe {
+        @Override
+        public void onMeasure(final MeasureHolder m) {
+            // Note: this runs on the main thread
+            final ArrayList<String> l = new ArrayList<>(connCache.size());
+            for (final Map.Entry<String, Connection> i : connCache.entrySet())
+                l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
+
+            m.putStringArray(BaseMeasureKeys.TCP_CONN_CACHE_DUMP, l.toArray(new String[0]));
+            m.putInt(BaseMeasureKeys.TCP_CONN_CACHE_CAPACITY, connCache.getMaxSize());
+        }
     }
 
 }

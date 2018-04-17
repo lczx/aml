@@ -19,7 +19,14 @@ package io.github.lczx.aml.tunnel;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.os.Binder;
+import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.AMLContextImpl;
+import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
+import io.github.lczx.aml.hook.monitoring.MeasureHolder;
+import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
 import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
 import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
@@ -33,18 +40,41 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     public static final String ACTION_START = "aml.tunnel.intent.action.SERVICE_START";
     public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";
+    public static final String ACTION_BIND_MONITORING = "aml.tunnel.intent.action.BIND_MONITORING";
     public static final String EXTRA_TARGET_PACKAGES = "aml.tunnel.intent.extra.TARGET_NAMES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
     private static final String VPN_ADDRESS = "10.0.8.2"; // IPv4 only
     private static final String VPN_ROUTE = "0.0.0.0"; // Catch-all
 
+    private static boolean isActive = false;
+
     private String[] targetPackages;
     private ParcelFileDescriptor vpnInterface;
+
+    private AMLContext amlContext;
 
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
     private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
     private Thread vpnThread;
+
+    /**
+     * {@code true} if an instance of this service has been created.
+     *
+     * <p> This condition yields true even when  the tunnel itself is not started with an explicit intent, the
+     * service is bound for monitoring with {@link android.content.Context#BIND_AUTO_CREATE Context.BIND_AUTO_CREATE}
+     * or the engine failed in an unexpected way.
+     */
+    public static boolean isActive() {
+        return isActive;
+    }
+
+    @Override
+    public void onCreate() {
+        LOG.debug("Service created");
+        super.onCreate();
+        isActive = true;
+    }
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
@@ -60,7 +90,9 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
                 startVPN();
                 break;
             case ACTION_STOP:
-                // Equivalent of stopService()
+                // stopService()/stopSelf() doesn't work and onDestroy() does not get called, the only way to stop
+                // the tunnel is to close the tunnel device, then we can call stopSelf() and terminate
+                stopVPN();
                 stopSelf();
                 break;
             default:
@@ -68,6 +100,16 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
                 return START_NOT_STICKY;
         }
         return START_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(final Intent intent) {
+        LOG.debug("Binding intent received: {}", intent);
+        if (intent != null && ACTION_BIND_MONITORING.equals(intent.getAction())) {
+            LOG.info("Requested AMLContext binding for monitoring");
+            return new ContextBinding();
+        }
+        return super.onBind(intent);
     }
 
     @Override
@@ -79,6 +121,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     @Override
     public void onDestroy() {
         stopVPN();
+        isActive = false;
+        LOG.debug("Service destroyed");
     }
 
     private void startVPN() {
@@ -86,14 +130,18 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         if (vpnInterface == null) {
             LOG.error("Cannot establish tunnel, application not prepared");
             stopSelf();
+            return;
         }
+
+        amlContext = new AMLContextImpl(this);
+        amlContext.getStatusMonitor().attachProbe(new ServiceProbe());
 
         tcpTxPipe = new ConcurrentPacketConnector();
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
 
-        tcpNetworkInterface = new TcpNetworkInterface(this, tcpTxPipe, rxPipe);
-        udpNetworkInterface = new UdpNetworkInterface(this, udpTxPipe, rxPipe);
+        tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
+        udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
@@ -113,9 +161,11 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void stopVPN() {
-        vpnThread.interrupt();
-        tcpNetworkInterface.shutdown();
-        udpNetworkInterface.shutdown();
+        if (amlContext != null) {
+            vpnThread.interrupt();
+            tcpNetworkInterface.shutdown();
+            udpNetworkInterface.shutdown();
+        }
         cleanup();
     }
 
@@ -128,6 +178,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         // TODO: Clear buffer pool when implemented
         IOUtils.closeResources(vpnInterface);
         vpnInterface = null;
+        amlContext = null;
     }
 
     private ParcelFileDescriptor initializeInterface() {
@@ -149,6 +200,22 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         } catch (final IllegalStateException e) {
             LOG.error("Cannot establish tunnel", e);
             return null;
+        }
+    }
+
+    public class ContextBinding extends Binder {
+        public AMLContext getTunnelContext() {
+            return amlContext;
+        }
+    }
+
+    private class ServiceProbe implements StatusProbe {
+        @Override
+        public void onMeasure(final MeasureHolder m) {
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_RX, rxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_TX_TCP, tcpTxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.QUEUE_SIZE_TX_UDP, udpTxPipe.waitingPacketsCount());
+            m.putInt(BaseMeasureKeys.THREAD_STATE_VPN, vpnThread.getState().ordinal());
         }
     }
 

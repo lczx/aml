@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.tunnel.protocol;
 
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.monitoring.StatusMonitor;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
 import io.github.lczx.aml.tunnel.SocketProtector;
@@ -66,6 +68,23 @@ public final class ProtocolTestUtils {
                     datagramSocket.getLocalSocketAddress(), datagramSocket.getRemoteSocketAddress());
             return true;
         }
+    }
+
+    public static class DummyContext implements AMLContext {
+
+        private final SocketProtector socketProtector = new ProtocolTestUtils.DummySocketProtector();
+        private final StatusMonitor statusMonitor = new StatusMonitor();
+
+        @Override
+        public SocketProtector getSocketProtector() {
+            return socketProtector;
+        }
+
+        @Override
+        public StatusMonitor getStatusMonitor() {
+            return statusMonitor;
+        }
+
     }
 
 }
