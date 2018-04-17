@@ -67,7 +67,9 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
                 startVPN();
                 break;
             case ACTION_STOP:
-                // Equivalent of stopService()
+                // stopService()/stopSelf() doesn't work and onDestroy() does not get called, the only way to stop
+                // the tunnel is to close the tunnel device, then we can call stopSelf() and terminate
+                stopVPN();
                 stopSelf();
                 break;
             default:
@@ -93,6 +95,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         if (vpnInterface == null) {
             LOG.error("Cannot establish tunnel, application not prepared");
             stopSelf();
+            return;
         }
 
         amlContext = new AMLContextImpl(this);
@@ -123,9 +126,11 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void stopVPN() {
-        vpnThread.interrupt();
-        tcpNetworkInterface.shutdown();
-        udpNetworkInterface.shutdown();
+        if (amlContext != null) {
+            vpnThread.interrupt();
+            tcpNetworkInterface.shutdown();
+            udpNetworkInterface.shutdown();
+        }
         cleanup();
     }
 
