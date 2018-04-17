@@ -35,25 +35,25 @@ public final class BaseMeasureKeys {
      *
      * <p> Type: int (ordinal of Thread.State)
      */
-    public static final String THREAD_STATE_TCP_TX = "thread_state_vpn";
+    public static final String THREAD_STATE_TCP_TX = "thread_state_tcp_tx";
     /**
      * Status of the TCP receiver thread
      *
      * <p> Type: int (ordinal of Thread.State)
      */
-    public static final String THREAD_STATE_TCP_RX = "thread_state_vpn";
+    public static final String THREAD_STATE_TCP_RX = "thread_state_tcp_rx";
     /**
      * Status of the UDP transmitter thread
      *
      * <p> Type: int (ordinal of Thread.State)
      */
-    public static final String THREAD_STATE_UDP_TX = "thread_state_vpn";
+    public static final String THREAD_STATE_UDP_TX = "thread_state_udp_tx";
     /**
      * Status of the UDP receiver thread
      *
      * <p> Type: int (ordinal of Thread.State)
      */
-    public static final String THREAD_STATE_UDP_RX = "thread_state_vpn";
+    public static final String THREAD_STATE_UDP_RX = "thread_state_udp_rx";
     /**
      * Number of packets waiting to be written to the VPN interface (received from the network)
      *
