@@ -58,7 +58,7 @@ public class UdpProtocolTest {
         srcSock = new InetSocketAddress(Inet4Address.getLocalHost(), 60666);
         dstSock = new InetSocketAddress(InetAddress.getByAddress(new byte[]{8, 8, 8, 8}), 53);
         udpNetworkInterface = new UdpNetworkInterface(
-                new ProtocolTestUtils.DummySocketProtector(),
+                new ProtocolTestUtils.DummyContext(),
                 new ProtocolTestUtils.PacketConnector(networkSink),
                 new ProtocolTestUtils.PacketConnector(networkSource));
         udpNetworkInterface.start();
