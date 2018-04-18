@@ -88,7 +88,10 @@ class UdpTransmitter implements Runnable {
 
                 // Use a channel in cache if present
                 final String cacheKey = buildCacheKey(dstSock, udp.getSourcePort());
-                DatagramChannel outChannel = channelCache.get(cacheKey);
+                DatagramChannel outChannel;
+                synchronized (channelCache) {
+                    outChannel = channelCache.get(cacheKey);
+                }
                 if (outChannel == null) {
                     // No channel already in cache, create a new one
                     final InetSocketAddress srcSock = new InetSocketAddress(
@@ -99,7 +102,9 @@ class UdpTransmitter implements Runnable {
                         // TODO: Recycle packet with buffer here when implemented
                         continue;
                     }
-                    channelCache.put(cacheKey, outChannel);
+                    synchronized (channelCache) {
+                        channelCache.put(cacheKey, outChannel);
+                    }
                 }
 
                 // Send packet payload through channel
@@ -108,7 +113,9 @@ class UdpTransmitter implements Runnable {
                     while (payload.hasRemaining()) outChannel.write(payload);
                 } catch (final IOException e) {
                     LOG.error("UDP write error, destination: {}", dstSock);
-                    channelCache.remove(cacheKey);
+                    synchronized (channelCache) {
+                        channelCache.remove(cacheKey);
+                    }
                     closeChannel(outChannel);
                 }
                 // TODO: Recycle packet with buffer here when implemented
@@ -146,10 +153,12 @@ class UdpTransmitter implements Runnable {
     }
 
     private void closeAll() {
-        final Iterator<Map.Entry<String, DatagramChannel>> it = channelCache.entrySet().iterator();
-        while (it.hasNext()) {
-            closeChannel(it.next().getValue());
-            it.remove();
+        synchronized (channelCache) {
+            final Iterator<Map.Entry<String, DatagramChannel>> it = channelCache.entrySet().iterator();
+            while (it.hasNext()) {
+                closeChannel(it.next().getValue());
+                it.remove();
+            }
         }
     }
 
@@ -161,12 +170,14 @@ class UdpTransmitter implements Runnable {
         @Override
         public void onMeasure(final MeasureHolder m) {
             // Note: this runs on the main thread
-            final ArrayList<String> l = new ArrayList<>(channelCache.size());
-            for (final Map.Entry<String, DatagramChannel> i : channelCache.entrySet())
-                l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
+            synchronized (channelCache) {
+                final ArrayList<String> l = new ArrayList<>(channelCache.size());
+                for (final Map.Entry<String, DatagramChannel> i : channelCache.entrySet())
+                    l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
 
-            m.putStringArray(BaseMeasureKeys.UDP_SOCK_CACHE_DUMP, l.toArray(new String[0]));
-            m.putInt(BaseMeasureKeys.UDP_SOCK_CACHE_CAPACITY, channelCache.getMaxSize());
+                m.putStringArray(BaseMeasureKeys.UDP_SOCK_CACHE_DUMP, l.toArray(new String[0]));
+                m.putInt(BaseMeasureKeys.UDP_SOCK_CACHE_CAPACITY, channelCache.getMaxSize());
+            }
         }
     }
 
