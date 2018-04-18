@@ -22,6 +22,7 @@ import android.net.VpnService;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import eu.faircode.netguard.IPUtil;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.AMLContextImpl;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
@@ -35,6 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class AMLTunnelService extends VpnService implements SocketProtector {
 
@@ -79,7 +85,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         // We could use onCreate/onDestroy to initialize/stop the VPN but then we wouldn't have access to intent params
-        if (intent.getAction() == null) {
+        if (intent == null || intent.getAction() == null) {
             LOG.warn("Service started without an action parameter");
             return START_NOT_STICKY;
         }
@@ -185,11 +191,13 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         final Builder builder = new Builder();
         builder.setSession("firewall");
         builder.addAddress(VPN_ADDRESS, 32);
-        builder.addRoute(VPN_ROUTE, 0);
+        //builder.addRoute(VPN_ROUTE, 0);
+        configureRoutes(builder);
         if (targetPackages != null) {
             for (final String packageName : targetPackages) {
                 try {
                     builder.addAllowedApplication(packageName);
+                    LOG.debug("Adding package to allowed applications: {}", packageName);
                 } catch (final PackageManager.NameNotFoundException e) {
                     LOG.warn("Target application with package \"{}\" not found, ignoring", packageName);
                 }
@@ -200,6 +208,34 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         } catch (final IllegalStateException e) {
             LOG.error("Cannot establish tunnel", e);
             return null;
+        }
+    }
+
+    private void configureRoutes(final Builder builder) {
+        // Exclusion ranges
+        List<IPUtil.CIDR> blacklist = new ArrayList<>();
+        blacklist.add(new IPUtil.CIDR("127.0.0.0", 8)); // Loopback
+        blacklist.add(new IPUtil.CIDR("192.168.42.0", 23)); // Tethering (USB: *42.x, Wi-Fi: *43.x )
+        blacklist.add(new IPUtil.CIDR("192.168.49.0", 24)); // Wi-Fi Direct
+        blacklist.add(new IPUtil.CIDR("224.0.0.0", 3)); // Broadcast (pt. 1)
+        // blacklist.add(new IPUtil.CIDR("239.255.255.250", 32))
+        Collections.sort(blacklist);
+
+        try {
+            InetAddress start = InetAddress.getByName("0.0.0.0");
+            for (final IPUtil.CIDR exclude : blacklist) {
+                LOG.trace("Excluding IP range from route: {} ... {}",
+                        exclude.getStart().getHostAddress(), exclude.getEnd().getHostAddress());
+                for (final IPUtil.CIDR include : IPUtil.toCIDR(start, IPUtil.minus1(exclude.getStart())))
+                    builder.addRoute(include.address, include.prefix);
+                start = IPUtil.plus1(exclude.getEnd());
+            }
+            for (final IPUtil.CIDR include : IPUtil.toCIDR("224.0.1.130", "239.255.255.249"))
+                builder.addRoute(include.address, include.prefix);
+            for (final IPUtil.CIDR include : IPUtil.toCIDR("239.255.255.251", "255.255.255.255"))
+                builder.addRoute(include.address, include.prefix);
+        } catch (final UnknownHostException e) {
+            LOG.error("Error while configuring routes", e);
         }
     }
 
