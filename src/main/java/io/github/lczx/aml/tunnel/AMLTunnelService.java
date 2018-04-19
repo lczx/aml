@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
+import io.github.lczx.aml.modules.tls.TlsProxy;
 import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
 import io.github.lczx.aml.tunnel.protocol.tcp.TcpHandler;
 import io.github.lczx.aml.tunnel.protocol.udp.UdpHandler;
@@ -49,6 +50,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     private Thread vpnThread;
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
+
+    private TlsProxy proxy;
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
@@ -86,6 +89,9 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             stopSelf();
         }
 
+        proxy = new TlsProxy(this);
+        proxy.start();
+
         tcpTxPipe = new ConcurrentPacketConnector();
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
@@ -114,6 +120,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     private void stopVPN() {
         isRunning = false;
+        proxy.stop();
         vpnThread.interrupt();
         tcpHandler.shutdown();
         udpHandler.shutdown();
@@ -122,6 +129,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void cleanup() {
+        proxy = null;
         tcpTxPipe = null;
         udpTxPipe = null;
         rxPipe = null;
