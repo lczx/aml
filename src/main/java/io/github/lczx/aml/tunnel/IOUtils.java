@@ -28,7 +28,7 @@ public final class IOUtils {
 
     private IOUtils() { }
 
-    public static void closeResources(final Closeable... resources) {
+    public static void safeClose(final Closeable... resources) {
         for (final Closeable resource : resources) {
             try {
                 resource.close();

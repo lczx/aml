@@ -76,7 +76,7 @@ public class Connection {
     }
 
     void closeUpstreamChannel() { // Used only by session registry
-        IOUtils.closeResources(upstreamChannel);
+        IOUtils.safeClose(upstreamChannel);
     }
 
     @Override

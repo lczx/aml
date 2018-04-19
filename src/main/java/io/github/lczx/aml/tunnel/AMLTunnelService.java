@@ -126,7 +126,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         udpTxPipe = null;
         rxPipe = null;
         // TODO: Clear buffer pool when implemented
-        IOUtils.closeResources(vpnInterface);
+        IOUtils.safeClose(vpnInterface);
     }
 
     private ParcelFileDescriptor initializeInterface() {

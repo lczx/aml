@@ -46,7 +46,7 @@ public class UdpHandler {
     public void shutdown() {
         txTread.interrupt();
         rxThread.interrupt();
-        IOUtils.closeResources(networkSelector);
+        IOUtils.safeClose(networkSelector);
 
         txTread = null;
         rxThread = null;

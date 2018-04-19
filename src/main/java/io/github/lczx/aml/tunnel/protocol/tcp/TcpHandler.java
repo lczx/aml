@@ -48,7 +48,7 @@ public class TcpHandler {
     public void shutdown() {
         txTread.interrupt();
         rxThread.interrupt();
-        IOUtils.closeResources(networkSelector);
+        IOUtils.safeClose(networkSelector);
 
         // TODO: Clear session registry?
 

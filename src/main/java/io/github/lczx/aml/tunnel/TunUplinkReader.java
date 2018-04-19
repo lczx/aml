@@ -83,7 +83,7 @@ public class TunUplinkReader implements TaskRunner.Task {
 
     @Override
     public void terminate() {
-        IOUtils.closeResources(deviceInput);
+        IOUtils.safeClose(deviceInput);
         LOG.debug("Stopped VPN device reader");
     }
 
