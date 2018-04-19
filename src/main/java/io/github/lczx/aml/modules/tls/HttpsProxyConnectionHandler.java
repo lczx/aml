@@ -17,6 +17,8 @@
 package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.modules.tls.cert.CryptoUtils;
+import io.github.lczx.aml.modules.tls.proxy.ProxyTlsClient;
+import io.github.lczx.aml.modules.tls.proxy.ProxyTlsServer;
 import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,12 +56,7 @@ public class HttpsProxyConnectionHandler implements Runnable {
                     downstreamSocket.getInputStream(), downstreamSocket.getOutputStream(),
                     CryptoUtils.createSecureRandom());
             LOG.debug("Starting downstream TLS server side ({}) on socket {}", downstreamTunnel, downstreamSocket);
-            downstreamTunnel.accept(new DefaultTlsServer() {
-                @Override
-                protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
-                    return null; // TODO: Return server certificate/credentials here
-                }
-            });
+            downstreamTunnel.accept(new ProxyTlsServer());
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
@@ -84,15 +81,7 @@ public class HttpsProxyConnectionHandler implements Runnable {
 
         upstreamTunnel = new TlsClientProtocol(
                 upstreamSocket.getInputStream(), upstreamSocket.getOutputStream(), CryptoUtils.createSecureRandom());
-        upstreamTunnel.connect(new DefaultTlsClient() {
-            @Override
-            public TlsAuthentication getAuthentication() throws IOException {
-                return new ServerOnlyTlsAuthentication() {
-                    @Override
-                    public void notifyServerCertificate(Certificate serverCertificate) throws IOException { }
-                };
-            }
-        });
+        upstreamTunnel.connect(new ProxyTlsClient());
         LOG.debug("Upstream connection established");
     }
 
