@@ -16,21 +16,107 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.modules.tls.cert.CryptoUtils;
 import io.github.lczx.aml.tunnel.SocketProtector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.tls.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.SecureRandom;
 
 public class HttpsProxyConnectionHandler implements Runnable {
 
-    public HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket socket,
+    private static final Logger LOG = LoggerFactory.getLogger(HttpsProxyConnectionHandler.class);
+
+    private final InetSocketAddress destinationSockAddress;
+    private final SocketProtector socketProtector;
+    private final Socket downstreamSocket;
+    private Socket upstreamSocket;
+    private TlsServerProtocol downstreamTunnel;
+    private TlsClientProtocol upstreamTunnel;
+
+    public HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
                                        final SocketProtector socketProtector) {
-        // TODO: Implement
+        this.destinationSockAddress = destinationSockAddress;
+        this.downstreamSocket = acceptedSocket;
+        this.socketProtector = socketProtector;
     }
 
     @Override
     public void run() {
-        // TODO: Implement
+        try {
+            downstreamTunnel = new ProxyServerProtocol(
+                    downstreamSocket.getInputStream(), downstreamSocket.getOutputStream(),
+                    CryptoUtils.createSecureRandom());
+            LOG.debug("Starting downstream TLS server side ({}) on socket {}", downstreamTunnel, downstreamSocket);
+            downstreamTunnel.accept(new DefaultTlsServer() {
+                @Override
+                protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
+                    return null; // TODO: Return server certificate/credentials here
+                }
+            });
+
+            // Create pipes to transfer data up and down
+            LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
+            final Pipe txPipe = new Pipe();
+            final Pipe rxPipe = new Pipe();
+
+            new Thread(rxPipe).start();
+            txPipe.run();
+
+        } catch (final IOException e) {
+            LOG.error("I/O exception while establishing a tunnel from " +
+                    downstreamSocket.getRemoteSocketAddress() + " to " + destinationSockAddress, e);
+            // TODO: Close socket (should close TCB as well)
+        }
+    }
+
+    private void onClientHelloReceived(final TlsServer tlsServer) throws IOException {
+        LOG.debug("Received TLS Client Hello (server: {}), connecting upstream to {}",
+                downstreamTunnel, destinationSockAddress);
+        upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
+        socketProtector.protect(upstreamSocket);
+
+        upstreamTunnel = new TlsClientProtocol(
+                upstreamSocket.getInputStream(), upstreamSocket.getOutputStream(), CryptoUtils.createSecureRandom());
+        upstreamTunnel.connect(new DefaultTlsClient() {
+            @Override
+            public TlsAuthentication getAuthentication() throws IOException {
+                return new ServerOnlyTlsAuthentication() {
+                    @Override
+                    public void notifyServerCertificate(Certificate serverCertificate) throws IOException { }
+                };
+            }
+        });
+        LOG.debug("Upstream connection established");
+    }
+
+    private class ProxyServerProtocol extends TlsServerProtocol {
+
+        private ProxyServerProtocol(final InputStream input, final OutputStream output,
+                                    final SecureRandom secureRandom) {
+            super(input, output, secureRandom);
+        }
+
+        @Override
+        protected void sendServerHelloMessage() throws IOException {
+            onClientHelloReceived(tlsServer);
+            super.sendServerHelloMessage();
+        }
+    }
+
+    private class Pipe implements Runnable {
+
+        @Override
+        public void run() {
+            // TODO: Implement
+        }
+
     }
 
 }
