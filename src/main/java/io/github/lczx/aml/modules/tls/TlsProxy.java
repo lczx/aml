@@ -36,4 +36,9 @@ public class TlsProxy {
     public void stop() {
         serverThread.interrupt();
     }
+
+    public TcpRedirectHook createTcpHook() {
+        return new TcpRedirectHook(proxyRoutes, serverRunnable);
+    }
+
 }
