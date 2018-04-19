@@ -43,6 +43,7 @@ class HttpsProxyConnectionHandler implements Runnable {
     private Socket upstreamSocket;
     private TlsServerProtocol downstreamTunnel;
     private TlsClientProtocol upstreamTunnel;
+    private boolean halfClosed = false;
 
     HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
                                 final ProxyCertificateProvider certProvider, final SocketProtector socketProtector) {
@@ -63,8 +64,8 @@ class HttpsProxyConnectionHandler implements Runnable {
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
-            final Pipe txPipe = new Pipe();
-            final Pipe rxPipe = new Pipe();
+            final Pipe txPipe = new Pipe("TX", downstreamTunnel, upstreamTunnel);
+            final Pipe rxPipe = new Pipe("RX", upstreamTunnel, downstreamTunnel);
 
             new Thread(rxPipe).start();
             txPipe.run();
@@ -107,9 +108,56 @@ class HttpsProxyConnectionHandler implements Runnable {
 
     private class Pipe implements Runnable {
 
+        private final String name;
+        private final TlsProtocol inProto, outProto;
+
+        private Pipe(final String name, final TlsProtocol inProto, final TlsProtocol outProto) {
+            this.name = name;
+            this.inProto = inProto;
+            this.outProto = outProto;
+        }
+
         @Override
         public void run() {
-            // TODO: Implement
+            try {
+                final byte[] buf = new byte[8192];
+                while (!Thread.interrupted()) {
+                    int count;
+                    try {
+                        count = inProto.getInputStream().read(buf);
+                    } catch (TlsNoCloseNotifyException e) {
+                        LOG.debug("{} got into an EOS-like situation: {}", this, e.getMessage());
+                        count = -1;
+                    }
+
+                    if (count != -1) {
+                        outProto.getOutputStream().write(buf, 0, count);
+                        LOG.trace("{} wrote {} bytes", this, count);
+                    } else {
+                        LOG.debug("{} reached EOS, closing output and quitting", this);
+
+                        // Do not use shutdownOutput() / isOutputShutdown() otherwise we can't answer to close_notify,
+                        // use a boolean to monitor the other thread's status
+                        // if (!outSock.isClosed()) outSock.shutdownOutput();
+                        if (halfClosed) {
+                            LOG.debug("{}, source has output shutdown too, also closing both sockets", this);
+                            TlsIOUtils.safeClose(inProto, outProto);
+                            halfClosed = false;
+                        } else {
+                            halfClosed = true;
+                        }
+                        break;
+                    }
+                }
+            } catch (final IOException e) {
+                LOG.error(this.toString() + " errored while transferring data", e);
+                TlsIOUtils.safeClose(inProto, outProto);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Pipe{\"" + name + "\", " + Integer.toHexString(hashCode()) + '}';
         }
 
     }

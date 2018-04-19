@@ -18,6 +18,7 @@ package io.github.lczx.aml.modules.tls;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.tls.TlsProtocol;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,6 +37,16 @@ public final class TlsIOUtils {
         while ((nRead = inputStream.read(buf)) != -1) out.write(buf, 0, nRead);
         out.flush();
         return out.toByteArray();
+    }
+
+    public static void safeClose(TlsProtocol... protocols) {
+        for (final TlsProtocol t : protocols) {
+            try {
+                t.close();
+            } catch (final IOException e) {
+                LOG.error("Error while closing " + t, e);
+            }
+        }
     }
 
 }
