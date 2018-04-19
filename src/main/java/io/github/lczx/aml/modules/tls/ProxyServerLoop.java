@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +29,12 @@ class ProxyServerLoop implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyServerLoop.class);
 
+    private final RouteTable routeTable;
     private final SocketProtector socketProtector;
     private ServerSocket serverSocket;
 
-    ProxyServerLoop(final SocketProtector socketProtector) {
+    ProxyServerLoop(final RouteTable routes, final SocketProtector socketProtector) {
+        this.routeTable = routes;
         this.socketProtector = socketProtector;
     }
 
@@ -63,7 +66,28 @@ class ProxyServerLoop implements Runnable {
     }
 
     private void handleNewConnection(final Socket socket) {
-        // TODO: Get original destination info and start a new thread to handle the connection
+        final RouteTable.RouteInfo route = routeTable.getRoute(socket.getPort());
+        if (route == null) {
+            LOG.warn("Unknown source port ({}), cannot determine proxy params: closing connection", socket.getPort());
+            IOUtils.safeClose(socket);
+            return;
+        }
+
+        Thread connThread;
+        switch (route.proxyType) {
+            case RouteTable.TYPE_HTTPS:
+                LOG.debug("New connection from port {}, original destination {}, type HTTPS",
+                        socket.getPort(), route.destinationSockAddress);
+                connThread = new Thread(new HttpsProxyConnectionHandler(
+                        route.destinationSockAddress, socket, socketProtector));
+                break;
+
+            default:
+                LOG.error("Requested proxy type unknown, closing connection");
+                IOUtils.safeClose(socket);
+                return;
+        }
+        connThread.start();
     }
 
 }

@@ -18,22 +18,19 @@ package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.tunnel.SocketProtector;
 
-public class TlsProxy {
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
-    private final RouteTable proxyRoutes = new RouteTable();
-    private final ProxyServerLoop serverRunnable;
-    private final Thread serverThread;
+public class HttpsProxyConnectionHandler implements Runnable {
 
-    public TlsProxy(final SocketProtector socketProtector) {
-        serverRunnable = new ProxyServerLoop(proxyRoutes, socketProtector);
-        serverThread = new Thread(serverRunnable);
+    public HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket socket,
+                                       final SocketProtector socketProtector) {
+        // TODO: Implement
     }
 
-    public void start() {
-        serverThread.start();
+    @Override
+    public void run() {
+        // TODO: Implement
     }
 
-    public void stop() {
-        serverThread.interrupt();
-    }
 }
