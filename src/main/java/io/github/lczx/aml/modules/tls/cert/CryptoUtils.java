@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.modules.tls.cert;
 
+import org.spongycastle.crypto.AsymmetricCipherKeyPair;
 import org.spongycastle.crypto.prng.ThreadedSeedGenerator;
 
 import java.security.SecureRandom;
@@ -29,6 +30,16 @@ public final class CryptoUtils {
     public static SecureRandom createSecureRandom() {
         // 20 bytes should be enough
         return new SecureRandom(SEED_GEN.generateSeed(20, true));
+    }
+
+    public static AsymmetricCipherKeyPair generateRSAKeyPair() {
+        // TODO: Implement
+        return null;
+    }
+
+    public static AsymmetricCipherKeyPair generateECCKeyPair() {
+        // TODO: Implement
+        return null;
     }
 
 }
