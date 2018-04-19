@@ -93,9 +93,9 @@ public class ProxyCertificateBuilder implements ProxyCertificateProvider {
     private AsymmetricCipherKeyPair createKeyPair(final int signatureAlgorithm) {
         switch (signatureAlgorithm) {
             case SignatureAlgorithm.ecdsa:
-                return CryptoUtils.generateECCKeyPair();
+                return CryptoUtils.generateECCKeyPair(CryptoUtils.DEFAULT_ECC_PARAMS);
             case SignatureAlgorithm.rsa:
-                return CryptoUtils.generateRSAKeyPair();
+                return CryptoUtils.generateRSAKeyPair(CryptoUtils.DEFAULT_RSA_STRENGTH);
             default:
                 throw new UnsupportedOperationException(
                         "Cannot generate key pair, signature algorithm not implemented (" + signatureAlgorithm + ')');

@@ -16,14 +16,35 @@
 
 package io.github.lczx.aml.modules.tls.cert;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongycastle.asn1.sec.SECNamedCurves;
+import org.spongycastle.asn1.sec.SECObjectIdentifiers;
+import org.spongycastle.asn1.x9.X9ECParameters;
 import org.spongycastle.crypto.AsymmetricCipherKeyPair;
+import org.spongycastle.crypto.generators.ECKeyPairGenerator;
+import org.spongycastle.crypto.generators.RSAKeyPairGenerator;
+import org.spongycastle.crypto.params.ECDomainParameters;
+import org.spongycastle.crypto.params.ECKeyGenerationParameters;
+import org.spongycastle.crypto.params.RSAKeyGenerationParameters;
 import org.spongycastle.crypto.prng.ThreadedSeedGenerator;
 
 import java.security.SecureRandom;
+import java.security.spec.RSAKeyGenParameterSpec;
 
 public final class CryptoUtils {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
     private static final ThreadedSeedGenerator SEED_GEN = new ThreadedSeedGenerator();
+
+    // % of certainty that the generated primes are actually prime numbers,
+    // use a low value to generate keys faster since we don't need strong ones
+    private static final int RSA_CERTAINTY = 12;
+
+    public static final int DEFAULT_RSA_STRENGTH = 1024;
+    public static final X9ECParameters DEFAULT_ECC_PARAMS = // a.k.a. ANSI x9.62 prime256v1 / SEC secp256r1 / NIST P-256
+            //X962NamedCurves.getByOID(X9ObjectIdentifiers.prime256v1);
+            SECNamedCurves.getByOID(SECObjectIdentifiers.secp256r1);
 
     private CryptoUtils() { }
 
@@ -32,14 +53,21 @@ public final class CryptoUtils {
         return new SecureRandom(SEED_GEN.generateSeed(20, true));
     }
 
-    public static AsymmetricCipherKeyPair generateRSAKeyPair() {
-        // TODO: Implement
-        return null;
+    public static AsymmetricCipherKeyPair generateRSAKeyPair(final int length) {
+        final RSAKeyPairGenerator kpGen = new RSAKeyPairGenerator();
+        kpGen.init(new RSAKeyGenerationParameters(RSAKeyGenParameterSpec.F4,
+                createSecureRandom(), length, RSA_CERTAINTY));
+        LOG.debug("Generating new RSA key pair, strength: {} bits", length);
+        return kpGen.generateKeyPair();
     }
 
-    public static AsymmetricCipherKeyPair generateECCKeyPair() {
-        // TODO: Implement
-        return null;
+    public static AsymmetricCipherKeyPair generateECCKeyPair(final X9ECParameters params) {
+        final ECKeyPairGenerator kpGen = new ECKeyPairGenerator();
+        final ECDomainParameters ecParams = new ECDomainParameters(
+                params.getCurve(), params.getG(), params.getN(), params.getH());
+        kpGen.init(new ECKeyGenerationParameters(ecParams, createSecureRandom()));
+        LOG.debug("Generating new EC key pair, params: {}" + params);
+        return kpGen.generateKeyPair();
     }
 
 }
