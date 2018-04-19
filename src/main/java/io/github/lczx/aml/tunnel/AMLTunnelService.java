@@ -89,7 +89,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             stopSelf();
         }
 
-        proxy = new TlsProxy(this);
+        proxy = new TlsProxy(this, getAssets());
         proxy.start();
         tcpHandler.__setHook(proxy.createTcpHook());
 

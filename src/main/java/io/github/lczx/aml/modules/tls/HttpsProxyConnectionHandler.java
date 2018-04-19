@@ -17,6 +17,7 @@
 package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.modules.tls.cert.CryptoUtils;
+import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsClient;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsServer;
 import io.github.lczx.aml.tunnel.SocketProtector;
@@ -31,21 +32,23 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.SecureRandom;
 
-public class HttpsProxyConnectionHandler implements Runnable {
+class HttpsProxyConnectionHandler implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpsProxyConnectionHandler.class);
 
     private final InetSocketAddress destinationSockAddress;
+    private final ProxyCertificateProvider certificateProvider;
     private final SocketProtector socketProtector;
     private final Socket downstreamSocket;
     private Socket upstreamSocket;
     private TlsServerProtocol downstreamTunnel;
     private TlsClientProtocol upstreamTunnel;
 
-    public HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
-                                       final SocketProtector socketProtector) {
+    HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
+                                final ProxyCertificateProvider certProvider, final SocketProtector socketProtector) {
         this.destinationSockAddress = destinationSockAddress;
         this.downstreamSocket = acceptedSocket;
+        this.certificateProvider = certProvider;
         this.socketProtector = socketProtector;
     }
 
@@ -56,7 +59,7 @@ public class HttpsProxyConnectionHandler implements Runnable {
                     downstreamSocket.getInputStream(), downstreamSocket.getOutputStream(),
                     CryptoUtils.createSecureRandom());
             LOG.debug("Starting downstream TLS server side ({}) on socket {}", downstreamTunnel, downstreamSocket);
-            downstreamTunnel.accept(new ProxyTlsServer());
+            downstreamTunnel.accept(new ProxyTlsServer(certificateProvider));
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
@@ -79,10 +82,13 @@ public class HttpsProxyConnectionHandler implements Runnable {
         upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
         socketProtector.protect(upstreamSocket);
 
+        final ProxyTlsClient tlsClient = new ProxyTlsClient();
         upstreamTunnel = new TlsClientProtocol(
                 upstreamSocket.getInputStream(), upstreamSocket.getOutputStream(), CryptoUtils.createSecureRandom());
-        upstreamTunnel.connect(new ProxyTlsClient());
+        upstreamTunnel.connect(tlsClient);
+
         LOG.debug("Upstream connection established");
+        ((ProxyTlsServer) tlsServer).setOriginalCertificate(tlsClient.getOriginalCertificate());
     }
 
     private class ProxyServerProtocol extends TlsServerProtocol {

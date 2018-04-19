@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
@@ -30,11 +31,15 @@ class ProxyServerLoop implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(ProxyServerLoop.class);
 
     private final RouteTable routeTable;
+    private final ProxyCertificateProvider certProvider;
     private final SocketProtector socketProtector;
+
     private ServerSocket serverSocket;
 
-    ProxyServerLoop(final RouteTable routes, final SocketProtector socketProtector) {
+    ProxyServerLoop(final RouteTable routes, final ProxyCertificateProvider certProvider,
+                    final SocketProtector socketProtector) {
         this.routeTable = routes;
+        this.certProvider = certProvider;
         this.socketProtector = socketProtector;
     }
 
@@ -79,7 +84,7 @@ class ProxyServerLoop implements Runnable {
                 LOG.debug("New connection from port {}, original destination {}, type HTTPS",
                         socket.getPort(), route.destinationSockAddress);
                 connThread = new Thread(new HttpsProxyConnectionHandler(
-                        route.destinationSockAddress, socket, socketProtector));
+                        route.destinationSockAddress, socket, certProvider, socketProtector));
                 break;
 
             default:

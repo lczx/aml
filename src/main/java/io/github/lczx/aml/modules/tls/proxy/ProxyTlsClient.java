@@ -28,6 +28,10 @@ public class ProxyTlsClient extends TlsClientBase {
 
     private Certificate peerCert;
 
+    public Certificate getOriginalCertificate() {
+        return peerCert;
+    }
+
     @Override
     public TlsAuthentication getAuthentication() {
         return new ServerOnlyTlsAuthentication() {

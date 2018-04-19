@@ -16,13 +16,26 @@
 
 package io.github.lczx.aml.modules.tls.proxy;
 
-import org.spongycastle.crypto.tls.CipherSuite;
-import org.spongycastle.crypto.tls.TlsSignerCredentials;
+import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
+import io.github.lczx.aml.modules.tls.cert.ServerCredentials;
+import org.spongycastle.cert.X509CertificateHolder;
+import org.spongycastle.crypto.tls.*;
 import org.spongycastle.util.Arrays;
 
 import java.io.IOException;
 
 public class ProxyTlsServer extends TlsServerBase {
+
+    private final ProxyCertificateProvider credentialsProvider;
+    private Certificate originalCertificate;
+
+    public ProxyTlsServer(final ProxyCertificateProvider credentialsProvider) {
+        this.credentialsProvider = credentialsProvider;
+    }
+
+    public void setOriginalCertificate(final Certificate originalCertificate) {
+        this.originalCertificate = originalCertificate;
+    }
 
     @Override
     protected int[] getCipherSuites() {
@@ -41,13 +54,32 @@ public class ProxyTlsServer extends TlsServerBase {
 
     @Override
     protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
-        // TODO: Implement certificate forging with RSA keys
-        return null;
+        return getForgedCredentials(SignatureAlgorithm.rsa);
     }
 
     @Override
     protected TlsSignerCredentials getECDSASignerCredentials() throws IOException {
-        // TODO: Implement certificate forging with ECC keys
+        return getForgedCredentials(SignatureAlgorithm.ecdsa);
+    }
+
+    private TlsSignerCredentials getForgedCredentials(final int signatureAlgorithm) throws IOException {
+        final ServerCredentials credentials = credentialsProvider.cloneCertificate(signatureAlgorithm,
+                new X509CertificateHolder(originalCertificate.getCertificateAt(0)));
+        return new DefaultTlsSignerCredentials(context, credentials.getCertificate(), credentials.getPrivateKey(),
+                getSignatureAndHashAlgorithm(credentials.getSignatureAlgorithm()));
+    }
+
+    private SignatureAndHashAlgorithm getSignatureAndHashAlgorithm(final int signatureAlgorithm) {
+        // TODO This fails to provide a default value for the client supported algorithms if it wasn't sent
+
+        if (supportedSignatureAlgorithms != null) {
+            for (final Object alg : supportedSignatureAlgorithms) {
+                if (((SignatureAndHashAlgorithm) alg).getSignature() == signatureAlgorithm)
+                    return (SignatureAndHashAlgorithm) alg;
+            }
+        }
+        // This will make DefaultSignerCredentials throw if TLS v1.2, that's OK
         return null;
     }
+
 }
