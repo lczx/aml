@@ -18,6 +18,7 @@ package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.modules.tls.cert.CryptoUtils;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
+import io.github.lczx.aml.modules.tls.proxy.ClientParameters;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsClient;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsServer;
 import io.github.lczx.aml.tunnel.SocketProtector;
@@ -77,13 +78,14 @@ class HttpsProxyConnectionHandler implements Runnable {
         }
     }
 
-    private void onClientHelloReceived(final TlsServer tlsServer) throws IOException {
-        LOG.debug("Received TLS Client Hello (server: {}), connecting upstream to {}",
-                downstreamTunnel, destinationSockAddress);
+    private void onClientHelloReceived(final TlsServer tlsServer,
+                                       final ClientParameters clientParameters) throws IOException {
+        LOG.debug("Received TLS Client Hello (server: {}, params: {}), connecting upstream to {}",
+                downstreamTunnel, clientParameters, destinationSockAddress);
         upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
         socketProtector.protect(upstreamSocket);
 
-        final ProxyTlsClient tlsClient = new ProxyTlsClient();
+        final ProxyTlsClient tlsClient = new ProxyTlsClient(clientParameters);
         upstreamTunnel = new TlsClientProtocol(
                 upstreamSocket.getInputStream(), upstreamSocket.getOutputStream(), CryptoUtils.createSecureRandom());
         upstreamTunnel.connect(tlsClient);
@@ -101,9 +103,11 @@ class HttpsProxyConnectionHandler implements Runnable {
 
         @Override
         protected void sendServerHelloMessage() throws IOException {
-            onClientHelloReceived(tlsServer);
+            onClientHelloReceived(tlsServer, new ClientParameters(
+                    getContext().getClientVersion(), offeredCipherSuites, offeredCompressionMethods, clientExtensions));
             super.sendServerHelloMessage();
         }
+
     }
 
     private class Pipe implements Runnable {

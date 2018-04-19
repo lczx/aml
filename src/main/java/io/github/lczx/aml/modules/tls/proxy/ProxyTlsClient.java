@@ -19,14 +19,23 @@ package io.github.lczx.aml.modules.tls.proxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.tls.Certificate;
+import org.spongycastle.crypto.tls.ProtocolVersion;
 import org.spongycastle.crypto.tls.ServerOnlyTlsAuthentication;
 import org.spongycastle.crypto.tls.TlsAuthentication;
+
+import java.io.IOException;
+import java.util.Hashtable;
 
 public class ProxyTlsClient extends TlsClientBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyTlsClient.class);
 
+    private final ClientParameters clientParameters;
     private Certificate peerCert;
+
+    public ProxyTlsClient(final ClientParameters clientParameters) {
+        this.clientParameters = clientParameters;
+    }
 
     public Certificate getOriginalCertificate() {
         return peerCert;
@@ -40,6 +49,26 @@ public class ProxyTlsClient extends TlsClientBase {
                 peerCert = serverCertificate;
             }
         };
+    }
+
+    @Override
+    public ProtocolVersion getClientVersion() {
+        return clientParameters.protocolVersion;
+    }
+
+    @Override
+    public short[] getCompressionMethods() {
+        return clientParameters.compressionMethods; // Should always be none
+    }
+
+    @Override
+    public int[] getCipherSuites() {
+        return clientParameters.cipherSuites; // TODO: This may need fixing
+    }
+
+    @Override
+    public Hashtable getClientExtensions() throws IOException {
+        return clientParameters.extensions; // TODO: This will surely crash
     }
 
 }
