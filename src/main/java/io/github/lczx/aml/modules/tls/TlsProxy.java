@@ -19,6 +19,7 @@ package io.github.lczx.aml.modules.tls;
 import android.content.res.AssetManager;
 import io.github.lczx.aml.modules.tls.cert.CredentialsLoader;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
+import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.tunnel.SocketProtector;
 
@@ -33,9 +34,9 @@ public class TlsProxy {
     public TlsProxy(final SocketProtector socketProtector, final AssetManager assetManager) {
         final ProxyCertificateProvider certificateProvider;
         try {
-            certificateProvider = new ProxyCertificateBuilder(
+            certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
                     CredentialsLoader.loadCertificateX509(assetManager.open("ca.crt")),
-                    CredentialsLoader.loadPrivateKeyDER(assetManager.open("ca.key")));
+                    CredentialsLoader.loadPrivateKeyDER(assetManager.open("ca.key"))));
         } catch (IOException e) {
             throw new RuntimeException("Cannot load CA credentials from application assets", e);
         }
