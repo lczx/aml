@@ -91,6 +91,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
         proxy = new TlsProxy(this);
         proxy.start();
+        tcpHandler.__setHook(proxy.createTcpHook());
 
         tcpTxPipe = new ConcurrentPacketConnector();
         udpTxPipe = new ConcurrentPacketConnector();

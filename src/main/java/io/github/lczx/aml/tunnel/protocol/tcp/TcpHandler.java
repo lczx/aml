@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
@@ -35,11 +36,13 @@ public class TcpHandler {
     private Selector networkSelector;
     private Thread txTread;
     private Thread rxThread;
+    private TcpTransmitter tcpTransmitter;
 
     public void start(final SocketProtector socketProtector,
                       final PacketSource pSrc, final PacketSink pDst) throws IOException {
         networkSelector = Selector.open();
-        txTread = new Thread(new TcpTransmitter(networkSelector, pSrc, pDst, socketProtector, sessionRegistry));
+        tcpTransmitter = new TcpTransmitter(networkSelector, pSrc, pDst, socketProtector, sessionRegistry);
+        txTread = new Thread(tcpTransmitter);
         rxThread = new Thread(new TcpReceiver(networkSelector, pDst, sessionRegistry));
         txTread.start();
         rxThread.start();
@@ -55,6 +58,11 @@ public class TcpHandler {
         txTread = null;
         rxThread = null;
         networkSelector = null;
+    }
+
+    public void __setHook(final DraftTcpHook tcpHook) {
+        sessionRegistry.__setHook(tcpHook);
+        tcpTransmitter.__setHook(tcpHook);
     }
 
 }

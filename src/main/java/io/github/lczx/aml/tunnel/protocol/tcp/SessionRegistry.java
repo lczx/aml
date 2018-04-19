@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.tunnel.protocol.udp.LruCache;
 
 import java.net.InetSocketAddress;
@@ -34,6 +35,12 @@ public class SessionRegistry {
         }
     });
 
+    private DraftTcpHook __hook;
+
+    public void __setHook(final DraftTcpHook hook) {
+        this.__hook = hook;
+    }
+
     public Connection getConnection(final String key) {
         synchronized (connCache) {
             return connCache.get(key);
@@ -47,7 +54,7 @@ public class SessionRegistry {
     }
 
     public void closeConnection(final Connection connection) {
-        // TODO: Place here connection closed hook
+        __hook.onClose(connection);
         connection.closeUpstreamChannel();
         synchronized (connCache) {
             connCache.remove(connection.getRegistryKey());
@@ -66,9 +73,11 @@ public class SessionRegistry {
 
     @Override
     public String toString() {
-        return "SessionRegistry{" +
-                "connCache=" + connCache +
-                '}';
+        synchronized (connCache) {
+            return "SessionRegistry{" +
+                    "connCache=" + connCache +
+                    '}';
+        }
     }
 
     // TODO: Fix nice code duplication from UDP transmitter
