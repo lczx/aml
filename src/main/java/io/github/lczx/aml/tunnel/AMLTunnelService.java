@@ -159,7 +159,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
                 new TunUplinkReader(vpnInterface.getFileDescriptor(), dispatcher),
-                new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)));
+                new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)), "tun_vpn");
 
         try {
             tcpNetworkInterface.start();

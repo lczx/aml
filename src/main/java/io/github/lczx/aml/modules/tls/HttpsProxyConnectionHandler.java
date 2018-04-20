@@ -69,7 +69,7 @@ class HttpsProxyConnectionHandler implements Runnable {
             final Pipe txPipe = new Pipe("TX", downstreamTunnel, upstreamTunnel);
             final Pipe rxPipe = new Pipe("RX", upstreamTunnel, downstreamTunnel);
 
-            new Thread(rxPipe).start();
+            new Thread(rxPipe, Thread.currentThread().getName() + "-aux").start();
             txPipe.run();
 
         } catch (final IOException e) {

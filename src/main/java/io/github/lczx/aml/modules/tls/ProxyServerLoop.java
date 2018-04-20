@@ -84,7 +84,8 @@ class ProxyServerLoop implements Runnable {
                 LOG.debug("New connection from port {}, original destination {}, type HTTPS",
                         socket.getPort(), route.destinationSockAddress);
                 connThread = new Thread(new HttpsProxyConnectionHandler(
-                        route.destinationSockAddress, socket, certProvider, socketProtector));
+                        route.destinationSockAddress, socket, certProvider, socketProtector),
+                        "pxy_conn" + socket.getPort());
                 break;
 
             default:

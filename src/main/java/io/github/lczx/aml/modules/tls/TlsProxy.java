@@ -44,7 +44,7 @@ public class TlsProxy {
         }
 
         serverRunnable = new ProxyServerLoop(proxyRoutes, certificateProvider, amlContext.getSocketProtector());
-        serverThread = new Thread(serverRunnable);
+        serverThread = new Thread(serverRunnable, "pxy_server");
     }
 
     public void start() {

@@ -33,8 +33,8 @@ public abstract class ProtocolNetworkInterface {
     public void start() throws IOException {
         LOG.info("Starting {} I/O thread pair", this);
         this.networkSelector = Selector.open();
-        txThread = new Thread(createTransmitterRunnable(networkSelector));
-        rxThread = new Thread(createReceiverRunnable(networkSelector));
+        txThread = new Thread(createTransmitterRunnable(networkSelector), "tun_ni_tx");
+        rxThread = new Thread(createReceiverRunnable(networkSelector), "tun_ni_rx");
         txThread.start();
         rxThread.start();
     }
