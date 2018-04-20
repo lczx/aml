@@ -49,22 +49,22 @@ public class ProxyTlsServer extends TlsServerBase {
 
     @Override
     public ProtocolVersion getServerVersion() throws IOException {
-        return serverParameters.protocolVersion;
+        return this.serverVersion = serverParameters.protocolVersion;
     }
 
     @Override
     public short getSelectedCompressionMethod() throws IOException {
-        return serverParameters.compressionMethod;
+        return this.selectedCompressionMethod = serverParameters.compressionMethod;
     }
 
     @Override
     public int getSelectedCipherSuite() throws IOException {
-        return serverParameters.cipherSuite;
+        return this.selectedCipherSuite = serverParameters.cipherSuite;
     }
 
     @Override
     public Hashtable getServerExtensions() throws IOException {
-        return serverParameters.extensions;
+        return this.serverExtensions = serverParameters.extensions;
     }
 
     private TlsSignerCredentials getForgedCredentials(final int signatureAlgorithm) throws IOException {
