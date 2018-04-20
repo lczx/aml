@@ -17,6 +17,7 @@
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
@@ -46,6 +47,8 @@ class TcpTransmitter implements Runnable {
     private final SessionRegistry sessionRegistry;
     private final AMLContext amlContext;
 
+    private DraftTcpHook __hook;
+
     TcpTransmitter(final Selector networkSelector, final PacketSource packetSource, final PacketSink packetSink,
                    final SessionRegistry sessionRegistry, final AMLContext amlContext) {
         this.networkSelector = networkSelector;
@@ -53,6 +56,10 @@ class TcpTransmitter implements Runnable {
         this.packetSink = packetSink;
         this.sessionRegistry = sessionRegistry;
         this.amlContext = amlContext;
+    }
+
+    public void __setHook(final DraftTcpHook hook) {
+        this.__hook = hook;
     }
 
     @Override
@@ -112,7 +119,7 @@ class TcpTransmitter implements Runnable {
         }
     }
 
-    private void initializeConnection(final String registryKey, final Packet packet, final InetSocketAddress dstSock)
+    private void initializeConnection(final String registryKey, final Packet packet, InetSocketAddress dstSock)
             throws IOException {
         final IPv4Layer ip = (IPv4Layer) packet.getFirstLayer();
         final TcpLayer tcp = (TcpLayer) ip.getNextLayer();
@@ -130,7 +137,7 @@ class TcpTransmitter implements Runnable {
         outChannel.socket().bind(null);
         amlContext.getSocketProtector().protect(outChannel.socket());
 
-        // TODO: Place here redirection hook when implemented
+        dstSock = __hook.onConnect(dstSock, outChannel.socket().getLocalPort());
 
         final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);
@@ -193,18 +200,21 @@ class TcpTransmitter implements Runnable {
 
             /* // TODO: Begin experimental passive close code (is it necessary?)
             if (connection.getTcb().state == TCB.State.FIN_WAIT_2) {
-                TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK, connection.getTcb());
+                TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
+                        connection.getTcb().localSeqN, connection.getTcb().localAckN);
                 packetSink.receive(packet);
                 sessionRegistry.closeConnection(connection); // Should go to TIME_WAIT but nevermind
                 return;
             }
             if (connection.getTcb().state == TCB.State.FIN_WAIT_1) {
                 if (tcp.isACK()) {
-                    TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK, connection.getTcb());
+                    TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
+                            connection.getTcb().localSeqN, connection.getTcb().localAckN);
                     sessionRegistry.closeConnection(connection); // Should go to TIME_WAIT but nevermind
                 } else {
                     connection.getTcb().state = TCB.State.CLOSING;
-                    TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK, connection.getTcb());
+                    TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
+                            connection.getTcb().localSeqN, connection.getTcb().localAckN);
                 }
                 packetSink.receive(packet);
                 return;

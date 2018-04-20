@@ -71,7 +71,7 @@ public class TunDownlinkWriter implements TaskRunner.Task {
 
     @Override
     public void terminate() {
-        IOUtils.closeResources(deviceOutput);
+        IOUtils.safeClose(deviceOutput);
         LOG.debug("Stopped VPN device writer");
     }
 

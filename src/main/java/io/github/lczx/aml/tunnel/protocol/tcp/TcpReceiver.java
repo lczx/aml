@@ -136,8 +136,9 @@ class TcpReceiver implements Runnable {
 
                 if (connection.getTcb().state != TCB.State.CLOSE_WAIT) {
                     /* // TODO: Begin experimental passive close code (is it necessary?)
-                    connection.getTcb*(.state = TCB.State.FIN_WAIT_1;
-                    TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_FIN, connection.getTcb());
+                    connection.getTcb().state = TCB.State.FIN_WAIT_1;
+                    TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_FIN,
+                            connection.getTcb().localSeqN, connection.getTcb().localAckN());
                     connection.getTcb().localSeqN++; // FIN counts as a byte
                     packetSink.receive(refPacket);
                     } // TODO: End experimental passive close code */

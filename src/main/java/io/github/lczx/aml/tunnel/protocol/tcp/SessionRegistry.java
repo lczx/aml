@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
@@ -39,8 +40,14 @@ public class SessionRegistry {
         }
     });
 
+    private DraftTcpHook __hook;
+
     /* package */ SessionRegistry(final AMLContext amlContext) {
         amlContext.getStatusMonitor().attachProbe(new TcpSessionProbe());
+    }
+
+    public void __setHook(final DraftTcpHook hook) {
+        this.__hook = hook;
     }
 
     /* package */ Connection getConnection(final String key) {
@@ -56,7 +63,7 @@ public class SessionRegistry {
     }
 
     /* package */ void closeConnection(final Connection connection) {
-        // TODO: Place here connection closed hook
+        __hook.onClose(connection);
         connection.closeUpstreamChannel();
         synchronized (connCache) {
             connCache.remove(connection.getRegistryKey());
@@ -75,9 +82,11 @@ public class SessionRegistry {
 
     @Override
     public String toString() {
-        return "SessionRegistry{" +
-                "connCache=" + connCache +
-                '}';
+        synchronized (connCache) {
+            return "SessionRegistry{" +
+                    "connCache=" + connCache +
+                    '}';
+        }
     }
 
     // TODO: Fix nice code duplication from UDP transmitter

@@ -57,7 +57,7 @@ public final class ProtocolTestUtils {
     public static class DummySocketProtector implements SocketProtector {
         @Override
         public boolean protect(final Socket socket) {
-            LOG.info("Got VPN protect request for TCO socket: {} -> {}",
+            LOG.info("Got VPN protect request for TCP socket: {} -> {}",
                     socket.getLocalSocketAddress(), socket.getRemoteSocketAddress());
             return true;
         }

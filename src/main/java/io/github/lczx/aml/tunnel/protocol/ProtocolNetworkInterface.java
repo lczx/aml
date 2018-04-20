@@ -33,8 +33,8 @@ public abstract class ProtocolNetworkInterface {
     public void start() throws IOException {
         LOG.info("Starting {} I/O thread pair", this);
         this.networkSelector = Selector.open();
-        txThread = new Thread(createTransmitterRunnable(networkSelector));
-        rxThread = new Thread(createReceiverRunnable(networkSelector));
+        txThread = new Thread(createTransmitterRunnable(networkSelector), "tun_ni_tx");
+        rxThread = new Thread(createReceiverRunnable(networkSelector), "tun_ni_rx");
         txThread.start();
         rxThread.start();
     }
@@ -43,7 +43,11 @@ public abstract class ProtocolNetworkInterface {
         LOG.info("Stopping {} I/O thread pair", this);
         txThread.interrupt();
         rxThread.interrupt();
-        IOUtils.closeResources(networkSelector);
+        IOUtils.safeClose(networkSelector);
+
+        txThread = null;
+        rxThread = null;
+        networkSelector = null;
     }
 
     protected abstract Runnable createTransmitterRunnable(Selector networkSelector);

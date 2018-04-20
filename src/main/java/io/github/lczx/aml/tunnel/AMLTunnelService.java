@@ -22,6 +22,7 @@ import android.net.VpnService;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import io.github.lczx.aml.modules.tls.TlsProxy;
 import eu.faircode.netguard.IPUtil;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.AMLContextImpl;
@@ -63,6 +64,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
     private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
     private Thread vpnThread;
+
+    private TlsProxy proxy;
 
     /**
      * {@code true} if an instance of this service has been created.
@@ -142,6 +145,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         amlContext = new AMLContextImpl(this);
         amlContext.getStatusMonitor().attachProbe(new ServiceProbe());
 
+
         tcpTxPipe = new ConcurrentPacketConnector();
         udpTxPipe = new ConcurrentPacketConnector();
         rxPipe = new ConcurrentPacketConnector();
@@ -149,10 +153,13 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
+        proxy = new TlsProxy(amlContext, getAssets());
+        proxy.start();
+
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
                 new TunUplinkReader(vpnInterface.getFileDescriptor(), dispatcher),
-                new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)));
+                new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)), "tun_vpn");
 
         try {
             tcpNetworkInterface.start();
@@ -162,12 +169,15 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             LOG.error("Selector initialization failed", e);
             cleanup();
             stopSelf();
-            //return;
+            return;
         }
+
+        ((TcpNetworkInterface) tcpNetworkInterface).__setHook(proxy.createTcpHook());
     }
 
     private void stopVPN() {
         if (amlContext != null) {
+            proxy.stop();
             vpnThread.interrupt();
             tcpNetworkInterface.shutdown();
             udpNetworkInterface.shutdown();
@@ -176,13 +186,14 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void cleanup() {
+        proxy = null;
         tcpTxPipe = null;
         udpTxPipe = null;
         rxPipe = null;
         tcpNetworkInterface = null;
         udpNetworkInterface = null;
         // TODO: Clear buffer pool when implemented
-        IOUtils.closeResources(vpnInterface);
+        IOUtils.safeClose(vpnInterface);
         vpnInterface = null;
         amlContext = null;
     }
@@ -213,7 +224,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
     private void configureRoutes(final Builder builder) {
         // Exclusion ranges
-        List<IPUtil.CIDR> blacklist = new ArrayList<>();
+        final List<IPUtil.CIDR> blacklist = new ArrayList<>();
         blacklist.add(new IPUtil.CIDR("127.0.0.0", 8)); // Loopback
         blacklist.add(new IPUtil.CIDR("192.168.42.0", 23)); // Tethering (USB: *42.x, Wi-Fi: *43.x )
         blacklist.add(new IPUtil.CIDR("192.168.49.0", 24)); // Wi-Fi Direct

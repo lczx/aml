@@ -17,6 +17,7 @@
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
@@ -33,6 +34,7 @@ public class TcpNetworkInterface extends ProtocolNetworkInterface {
     private final AMLContext amlContext;
     private final PacketSource packetSource;
     private final PacketSink packetDestination;
+    private TcpTransmitter tcpTransmitter;
 
     public TcpNetworkInterface(final AMLContext amlContext, final PacketSource pSrc, final PacketSink pDst) {
         this.sessionRegistry = new SessionRegistry(amlContext);
@@ -49,7 +51,8 @@ public class TcpNetworkInterface extends ProtocolNetworkInterface {
 
     @Override
     protected Runnable createTransmitterRunnable(final Selector networkSelector) {
-        return new TcpTransmitter(networkSelector, packetSource, packetDestination, sessionRegistry, amlContext);
+        return this.tcpTransmitter =
+                new TcpTransmitter(networkSelector, packetSource, packetDestination, sessionRegistry, amlContext);
     }
 
     @Override
@@ -63,6 +66,10 @@ public class TcpNetworkInterface extends ProtocolNetworkInterface {
             m.putInt(BaseMeasureKeys.THREAD_STATE_TCP_TX, txThread.getState().ordinal());
             m.putInt(BaseMeasureKeys.THREAD_STATE_TCP_RX, rxThread.getState().ordinal());
         }
+    }
+    public void __setHook(final DraftTcpHook tcpHook) {
+        sessionRegistry.__setHook(tcpHook);
+        tcpTransmitter.__setHook(tcpHook);
     }
 
 }

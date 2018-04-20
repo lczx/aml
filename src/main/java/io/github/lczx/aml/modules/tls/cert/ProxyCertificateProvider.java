@@ -14,28 +14,15 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel;
+package io.github.lczx.aml.modules.tls.cert;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.spongycastle.cert.X509CertificateHolder;
 
-import java.io.Closeable;
 import java.io.IOException;
 
-public final class IOUtils {
+public interface ProxyCertificateProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(IOUtils.class);
-
-    private IOUtils() { }
-
-    public static void safeClose(final Closeable... resources) {
-        for (final Closeable resource : resources) {
-            try {
-                if (resource != null) resource.close();
-            } catch (final IOException e) {
-                LOG.error("I/O exception while closing " + resource, e);
-            }
-        }
-    }
+    ServerCredentials cloneCertificate(
+            int signatureAlgorithm, X509CertificateHolder originalCertificate) throws IOException;
 
 }
