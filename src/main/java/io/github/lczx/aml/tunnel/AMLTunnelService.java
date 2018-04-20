@@ -155,7 +155,6 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
         proxy = new TlsProxy(this, getAssets());
         proxy.start();
-        tcpNetworkInterface.__setHook(proxy.createTcpHook());
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
@@ -170,8 +169,10 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             LOG.error("Selector initialization failed", e);
             cleanup();
             stopSelf();
-            //return;
+            return;
         }
+
+        ((TcpNetworkInterface) tcpNetworkInterface).__setHook(proxy.createTcpHook());
     }
 
     private void stopVPN() {
