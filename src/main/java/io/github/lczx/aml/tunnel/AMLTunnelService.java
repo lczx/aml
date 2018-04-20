@@ -153,7 +153,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
-        proxy = new TlsProxy(this, getAssets());
+        proxy = new TlsProxy(amlContext, getAssets());
         proxy.start();
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);

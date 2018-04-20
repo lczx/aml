@@ -16,16 +16,27 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.monitoring.MeasureHolder;
+import io.github.lczx.aml.hook.monitoring.StatusProbe;
+
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RouteTable {
 
+    public static final String PROXY_ROUTE_TABLE_DUMP = "proxy_route_table_dump";
+
     public static final int TYPE_RESERVED = 0;
     public static final int TYPE_HTTPS = 1;
 
     private final Map<Integer, RouteInfo> routeMap = new HashMap<>();
+
+    /* package */ RouteTable(final AMLContext amlContext) {
+        amlContext.getStatusMonitor().attachProbe(new RouteProbe());
+    }
 
     public void addRoute(final int sourcePort, final InetSocketAddress destination, final int proxyType) {
         synchronized (routeMap) {
@@ -68,6 +79,18 @@ public class RouteTable {
                 return "HTTPS " + destinationSockAddress;
             else
                 return "UNKNOWN " + destinationSockAddress;
+        }
+    }
+
+    private class RouteProbe implements StatusProbe {
+        @Override
+        public void onMeasure(final MeasureHolder m) {
+            // Note: this runs on the main thread
+            final ArrayList<String> l = new ArrayList<>(routeMap.size());
+            for (final Map.Entry<Integer, RouteInfo> i : routeMap.entrySet())
+                l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
+
+            m.putStringArray(PROXY_ROUTE_TABLE_DUMP, l.toArray(new String[0]));
         }
     }
 
