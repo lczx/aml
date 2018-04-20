@@ -66,8 +66,8 @@ class HttpsProxyConnectionHandler implements Runnable {
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
-            final Pipe txPipe = new Pipe(downstreamTunnel, upstreamTunnel);
-            final Pipe rxPipe = new Pipe(upstreamTunnel, downstreamTunnel);
+            final PayloadPipe txPipe = new PayloadPipe(downstreamTunnel, upstreamTunnel);
+            final PayloadPipe rxPipe = new PayloadPipe(upstreamTunnel, downstreamTunnel);
 
             new Thread(rxPipe, Thread.currentThread().getName() + "-rx").start();
             Thread.currentThread().setName(Thread.currentThread().getName() + "-tx");
@@ -111,59 +111,6 @@ class HttpsProxyConnectionHandler implements Runnable {
             onClientHelloReceived(tlsServer, new ClientParameters(
                     getContext().getClientVersion(), offeredCipherSuites, offeredCompressionMethods, clientExtensions));
             super.sendServerHelloMessage();
-        }
-
-    }
-
-    private static class Pipe implements Runnable {
-
-        private final TlsProtocol inProto, outProto;
-        private Thread pipeThread;
-
-        private Pipe(final TlsProtocol inProto, final TlsProtocol outProto) {
-            this.inProto = inProto;
-            this.outProto = outProto;
-        }
-
-        @Override
-        public void run() {
-            pipeThread = Thread.currentThread();
-            try {
-                final byte[] buf = new byte[8192];
-                while (!Thread.interrupted()) {
-                    int count;
-                    try {
-                        count = inProto.getInputStream().read(buf);
-                    } catch (final TlsNoCloseNotifyException e) {
-                        LOG.debug("{} got into an EOS-like situation: {}", this, e.getMessage());
-                        count = -1;
-                    } catch (final SocketException e) {
-                        LOG.debug("{} input was closed: {}", this, e.getMessage());
-                        count = -1;
-                    }
-
-                    if (count != -1) {
-                        outProto.getOutputStream().write(buf, 0, count);
-                        LOG.trace("{} wrote {} bytes", this, count);
-                    } else {
-                        LOG.debug("{} reached EOS, closing output and quitting", this);
-
-                        // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
-                        // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
-                        // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
-                        outProto.close();
-                        break;
-                    }
-                }
-            } catch (final IOException e) {
-                LOG.error(this.toString() + " errored while transferring data", e);
-                TlsIOUtils.safeClose(inProto, outProto);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "Pipe{" + pipeThread.getName() + '}';
         }
 
     }
