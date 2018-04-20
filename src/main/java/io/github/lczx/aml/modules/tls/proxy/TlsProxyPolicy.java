@@ -98,37 +98,42 @@ public final class TlsProxyPolicy {
     private static Hashtable<Integer, byte[]> applyExtPolicy(
             final Hashtable<Integer, byte[]> downstreamExtensions, final Hashtable<Integer, byte[]> localExtensions) {
         final Iterator<Map.Entry<Integer, byte[]>> i = downstreamExtensions.entrySet().iterator();
+        final StringBuilder log = new StringBuilder();
+        boolean logWarn = false;
+
         while (i.hasNext()) {
             final Map.Entry<Integer, byte[]> e = i.next();
+            log.append(' ').append(e.getKey()).append(':');
             switch (policyForExtension(e.getKey())) {
                 case EPOL_PASSTHROUGH:
-                    LOG.debug("Processing TLS extension ({}), preserve", e.getKey());
+                    log.append("pass");
                     break;
 
                 case EPOL_DROP:
-                    LOG.debug("Processing TLS extension ({}), drop", e.getKey());
+                    log.append("drop");
                     i.remove();
                     break;
 
                 case EPOL_USE_LOCAL:
                     final byte[] localData = localExtensions.get(e.getKey());
                     if (localData == null) {
-                        LOG.debug("Processing TLS extension ({}), use local (absent -> drop)", e.getKey());
+                        log.append("drop(local_absent)");
                         i.remove();
                     } else {
-                        LOG.debug("Processing TLS extension ({}), use local (present)", e.getKey());
+                        log.append("local");
                         e.setValue(localData);
                     }
                     break;
 
                 default:
                     if (isGreaseId(e.getKey())) {
-                        LOG.debug("Processing TLS extension ({}), grease (-> passthrough)", e.getKey());
+                        log.append("pass(grease)");
                     } else if (Arrays.contains(TLS13_EXTENSIONS, e.getKey())) {
-                        LOG.debug("Processing TLS extension ({}), TLSv1.3 (-> drop)");
+                        log.append("drop(v1.3)");
                         i.remove();
                     } else {
-                        LOG.warn("Processing TLS extension ({}), UNKNOWN (-> drop)", e.getKey());
+                        log.append("drop(***unknown***)");
+                        logWarn = true;
                         i.remove();
                     }
                     break;
@@ -138,11 +143,15 @@ public final class TlsProxyPolicy {
         // Add missing USE_LOCAL extensions
         for (final Map.Entry<Integer, byte[]> e : localExtensions.entrySet()) {
             if (policyForExtension(e.getKey()) == EPOL_USE_LOCAL && !downstreamExtensions.containsKey(e.getKey())) {
-                LOG.debug("Adding missing USE_LOCAL extension ({})", Integer.toHexString(e.getKey()));
+                log.append(' ').append(e.getKey()).append(":local(orig_absent)");
                 downstreamExtensions.put(e.getKey(), e.getValue());
             }
         }
 
+        if (logWarn)
+            LOG.warn("Applied extension policy (unknown extensions detected):{}", log.toString());
+        else
+            LOG.debug("Applied extension policy:{}", log.toString());
         return downstreamExtensions;
     }
 
