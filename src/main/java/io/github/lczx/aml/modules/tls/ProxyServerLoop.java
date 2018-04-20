@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 class ProxyServerLoop implements Runnable {
 
@@ -54,10 +55,13 @@ class ProxyServerLoop implements Runnable {
         }
         LOG.info("Proxy server started on {}", serverSocket.getLocalSocketAddress());
 
-        while (!Thread.interrupted()) {
+        while (true) {
             final Socket clientSocket;
             try {
-                clientSocket = serverSocket.accept(); // TODO: call serverSock.close() from another thread to interrupt
+                clientSocket = serverSocket.accept();
+            } catch (final SocketException e) {
+                LOG.debug("Socket closed, breaking loop");
+                break;
             } catch (final IOException e) {
                 LOG.error("Exception on socket accept", e);
                 continue;
@@ -68,6 +72,10 @@ class ProxyServerLoop implements Runnable {
 
     public int getLocalPort() {
         return serverSocket.getLocalPort();
+    }
+
+    /* package */ void closeServerSocket() {
+        IOUtils.safeClose(serverSocket); // Called from another thread
     }
 
     private void handleNewConnection(final Socket socket) {

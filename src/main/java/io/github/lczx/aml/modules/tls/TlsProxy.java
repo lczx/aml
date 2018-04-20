@@ -39,7 +39,7 @@ public class TlsProxy {
             certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
                     CredentialsLoader.loadCertificateX509(assetManager.open("ca.crt")),
                     CredentialsLoader.loadPrivateKeyDER(assetManager.open("ca.key"))));
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new RuntimeException("Cannot load CA credentials from application assets", e);
         }
 
@@ -53,6 +53,7 @@ public class TlsProxy {
 
     public void stop() {
         serverThread.interrupt();
+        serverRunnable.closeServerSocket();
     }
 
     public TcpRedirectHook createTcpHook() {
