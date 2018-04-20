@@ -90,7 +90,7 @@ public class ProxyCertificateBuilder implements ProxyCertificateProvider {
         return new ServerCredentials(signatureAlgorithm, holder, keyPair.getPrivate());
     }
 
-    private AsymmetricCipherKeyPair createKeyPair(final int signatureAlgorithm) {
+    private AsymmetricCipherKeyPair createKeyPair(final int signatureAlgorithm) throws IOException {
         switch (signatureAlgorithm) {
             case SignatureAlgorithm.ecdsa:
                 return CryptoUtils.generateECCKeyPair(CryptoUtils.DEFAULT_ECC_PARAMS);
