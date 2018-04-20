@@ -24,6 +24,7 @@ import org.spongycastle.crypto.tls.ServerOnlyTlsAuthentication;
 import org.spongycastle.crypto.tls.TlsAuthentication;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Hashtable;
 
 public class ProxyTlsClient extends TlsClientBase {
@@ -65,12 +66,16 @@ public class ProxyTlsClient extends TlsClientBase {
 
     @Override
     public int[] getCipherSuites() {
-        return clientParameters.cipherSuites; // TODO: This may need fixing
+        final int[] suites = TlsProxyPolicy.applyUplinkCipherSuitePolicy(clientParameters.cipherSuites);
+        LOG.debug("Offered cipher suites {} out of {}",
+                Arrays.toString(suites), Arrays.toString(clientParameters.cipherSuites));
+        return suites;
     }
 
     @Override
     public Hashtable getClientExtensions() throws IOException {
-        return clientParameters.extensions; // TODO: This will surely crash
+        // BC should only generate supported_groups(10), ec_points_formats(11) and signature_algorithms(13) extensions
+        return TlsProxyPolicy.applyUplinkExtensionPolicy(clientParameters.extensions, super.getClientExtensions());
     }
 
     @Override
