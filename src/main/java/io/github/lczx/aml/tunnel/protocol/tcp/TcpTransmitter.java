@@ -16,10 +16,10 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
+import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
-import io.github.lczx.aml.tunnel.SocketProtector;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
@@ -44,18 +44,18 @@ class TcpTransmitter implements Runnable {
     private final Selector networkSelector;
     private final PacketSource packetSource;
     private final PacketSink packetSink;
-    private final SocketProtector socketProtector;
     private final SessionRegistry sessionRegistry;
+    private final AMLContext amlContext;
 
     private DraftTcpHook __hook;
 
     TcpTransmitter(final Selector networkSelector, final PacketSource packetSource, final PacketSink packetSink,
-                   final SocketProtector socketProtector, final SessionRegistry sessionRegistry) {
+                   final SessionRegistry sessionRegistry, final AMLContext amlContext) {
         this.networkSelector = networkSelector;
         this.packetSource = packetSource;
         this.packetSink = packetSink;
-        this.socketProtector = socketProtector;
         this.sessionRegistry = sessionRegistry;
+        this.amlContext = amlContext;
     }
 
     public void __setHook(final DraftTcpHook hook) {
@@ -135,7 +135,7 @@ class TcpTransmitter implements Runnable {
         final SocketChannel outChannel = SocketChannel.open();
         outChannel.configureBlocking(false);
         outChannel.socket().bind(null);
-        socketProtector.protect(outChannel.socket());
+        amlContext.getSocketProtector().protect(outChannel.socket());
 
         dstSock = __hook.onConnect(dstSock, outChannel.socket().getLocalPort());
 

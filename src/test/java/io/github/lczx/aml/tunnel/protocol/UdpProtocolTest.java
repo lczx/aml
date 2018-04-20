@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.protocol;
 
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.UdpLayer;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
-import io.github.lczx.aml.tunnel.protocol.ProtocolTestUtils;
+import io.github.lczx.aml.tunnel.protocol.udp.UdpNetworkInterface;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
 
-public class UdpHandlerTest {
+public class UdpProtocolTest {
 
     static {
         final Properties props = System.getProperties();
@@ -44,22 +44,24 @@ public class UdpHandlerTest {
         props.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(UdpHandlerTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(UdpProtocolTest.class);
 
     private static final String QUERIED_HOSTNAME = "example.com";
 
     private final InetSocketAddress srcSock; // 127.0.0.1:60666 - src addr doesn't matter anyway
     private final InetSocketAddress dstSock; // 8.8.8.8:53 - 53: std. DNS port
-    private final UdpHandler udpHandler = new UdpHandler();
+    private final UdpNetworkInterface udpNetworkInterface;
     private final ConcurrentLinkedQueue<Packet> networkSink = new ConcurrentLinkedQueue<>();
     private final LinkedBlockingQueue<Packet> networkSource = new LinkedBlockingQueue<>();
 
-    public UdpHandlerTest() throws IOException {
+    public UdpProtocolTest() throws IOException {
         srcSock = new InetSocketAddress(Inet4Address.getLocalHost(), 60666);
         dstSock = new InetSocketAddress(InetAddress.getByAddress(new byte[]{8, 8, 8, 8}), 53);
-        udpHandler.start(new ProtocolTestUtils.DummySocketProtector(),
+        udpNetworkInterface = new UdpNetworkInterface(
+                new ProtocolTestUtils.DummyContext(),
                 new ProtocolTestUtils.PacketConnector(networkSink),
                 new ProtocolTestUtils.PacketConnector(networkSource));
+        udpNetworkInterface.start();
     }
 
     @Test
@@ -80,7 +82,7 @@ public class UdpHandlerTest {
         final ByteBuffer r = aUdp.getPayloadBufferView();
         assertEquals(transactionId, r.getShort());
         assertEquals((short) 0x8180, r.getShort()); // Standard response flags, no error
-        udpHandler.shutdown();
+        udpNetworkInterface.shutdown();
     }
 
     private Packet buildDNSQuery(final short transactionId) {

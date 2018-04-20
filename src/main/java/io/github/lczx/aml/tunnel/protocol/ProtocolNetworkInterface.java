@@ -14,43 +14,44 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.protocol;
 
 import io.github.lczx.aml.tunnel.IOUtils;
-import io.github.lczx.aml.tunnel.PacketSink;
-import io.github.lczx.aml.tunnel.PacketSource;
-import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.Selector;
 
-public class UdpHandler {
+public abstract class ProtocolNetworkInterface {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UdpHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ProtocolNetworkInterface.class);
 
     private Selector networkSelector;
-    private Thread txTread;
-    private Thread rxThread;
+    protected Thread txThread, rxThread;
 
-    public void start(final SocketProtector socketProtector,
-                      final PacketSource pSrc, final PacketSink pDst) throws IOException {
-        networkSelector = Selector.open();
-        txTread = new Thread(new UdpTransmitter(networkSelector, pSrc, socketProtector));
-        rxThread = new Thread(new UdpReceiver(networkSelector, pDst));
-        txTread.start();
+    public void start() throws IOException {
+        LOG.info("Starting {} I/O thread pair", this);
+        this.networkSelector = Selector.open();
+        txThread = new Thread(createTransmitterRunnable(networkSelector));
+        rxThread = new Thread(createReceiverRunnable(networkSelector));
+        txThread.start();
         rxThread.start();
     }
 
     public void shutdown() {
-        txTread.interrupt();
+        LOG.info("Stopping {} I/O thread pair", this);
+        txThread.interrupt();
         rxThread.interrupt();
         IOUtils.safeClose(networkSelector);
 
-        txTread = null;
+        txThread = null;
         rxThread = null;
         networkSelector = null;
     }
+
+    protected abstract Runnable createTransmitterRunnable(Selector networkSelector);
+
+    protected abstract Runnable createReceiverRunnable(Selector networkSelector);
 
 }
