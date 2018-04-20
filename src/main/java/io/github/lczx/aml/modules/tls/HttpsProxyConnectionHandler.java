@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.SecureRandom;
 
 class HttpsProxyConnectionHandler implements Runnable {
@@ -45,7 +46,6 @@ class HttpsProxyConnectionHandler implements Runnable {
     private Socket upstreamSocket;
     private TlsServerProtocol downstreamTunnel;
     private TlsClientProtocol upstreamTunnel;
-    private boolean halfClosed = false;
 
     HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
                                 final ProxyCertificateProvider certProvider, final SocketProtector socketProtector) {
@@ -66,10 +66,11 @@ class HttpsProxyConnectionHandler implements Runnable {
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
-            final Pipe txPipe = new Pipe("TX", downstreamTunnel, upstreamTunnel);
-            final Pipe rxPipe = new Pipe("RX", upstreamTunnel, downstreamTunnel);
+            final Pipe txPipe = new Pipe(downstreamTunnel, upstreamTunnel);
+            final Pipe rxPipe = new Pipe(upstreamTunnel, downstreamTunnel);
 
-            new Thread(rxPipe, Thread.currentThread().getName() + "-aux").start();
+            new Thread(rxPipe, Thread.currentThread().getName() + "-rx").start();
+            Thread.currentThread().setName(Thread.currentThread().getName() + "-tx");
             txPipe.run();
 
         } catch (final IOException e) {
@@ -114,27 +115,30 @@ class HttpsProxyConnectionHandler implements Runnable {
 
     }
 
-    private class Pipe implements Runnable {
+    private static class Pipe implements Runnable {
 
-        private final String name;
         private final TlsProtocol inProto, outProto;
+        private Thread pipeThread;
 
-        private Pipe(final String name, final TlsProtocol inProto, final TlsProtocol outProto) {
-            this.name = name;
+        private Pipe(final TlsProtocol inProto, final TlsProtocol outProto) {
             this.inProto = inProto;
             this.outProto = outProto;
         }
 
         @Override
         public void run() {
+            pipeThread = Thread.currentThread();
             try {
                 final byte[] buf = new byte[8192];
                 while (!Thread.interrupted()) {
                     int count;
                     try {
                         count = inProto.getInputStream().read(buf);
-                    } catch (TlsNoCloseNotifyException e) {
+                    } catch (final TlsNoCloseNotifyException e) {
                         LOG.debug("{} got into an EOS-like situation: {}", this, e.getMessage());
+                        count = -1;
+                    } catch (final SocketException e) {
+                        LOG.debug("{} input was closed: {}", this, e.getMessage());
                         count = -1;
                     }
 
@@ -144,16 +148,10 @@ class HttpsProxyConnectionHandler implements Runnable {
                     } else {
                         LOG.debug("{} reached EOS, closing output and quitting", this);
 
-                        // Do not use shutdownOutput() / isOutputShutdown() otherwise we can't answer to close_notify,
-                        // use a boolean to monitor the other thread's status
-                        // if (!outSock.isClosed()) outSock.shutdownOutput();
-                        if (halfClosed) {
-                            LOG.debug("{}, source has output shutdown too, also closing both sockets", this);
-                            TlsIOUtils.safeClose(inProto, outProto);
-                            halfClosed = false;
-                        } else {
-                            halfClosed = true;
-                        }
+                        // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
+                        // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
+                        // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
+                        outProto.close();
                         break;
                     }
                 }
@@ -165,7 +163,7 @@ class HttpsProxyConnectionHandler implements Runnable {
 
         @Override
         public String toString() {
-            return "Pipe{\"" + name + "\", " + Integer.toHexString(hashCode()) + '}';
+            return "Pipe{" + pipeThread.getName() + '}';
         }
 
     }
