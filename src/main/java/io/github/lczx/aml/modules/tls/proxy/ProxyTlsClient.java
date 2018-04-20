@@ -31,14 +31,16 @@ public class ProxyTlsClient extends TlsClientBase {
     private static final Logger LOG = LoggerFactory.getLogger(ProxyTlsClient.class);
 
     private final ClientParameters clientParameters;
+    private Hashtable serverExtensions;
     private Certificate peerCert;
 
     public ProxyTlsClient(final ClientParameters clientParameters) {
         this.clientParameters = clientParameters;
     }
 
-    public Certificate getOriginalCertificate() {
-        return peerCert;
+    public ServerParameters makeServerParameters() {
+        return new ServerParameters(context.getServerVersion(),
+                selectedCipherSuite, selectedCompressionMethod, serverExtensions, peerCert);
     }
 
     @Override
@@ -69,6 +71,12 @@ public class ProxyTlsClient extends TlsClientBase {
     @Override
     public Hashtable getClientExtensions() throws IOException {
         return clientParameters.extensions; // TODO: This will surely crash
+    }
+
+    @Override
+    public void processServerExtensions(final Hashtable serverExtensions) throws IOException {
+        super.processServerExtensions(serverExtensions);
+        this.serverExtensions = serverExtensions;
     }
 
 }

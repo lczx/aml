@@ -20,36 +20,21 @@ import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.modules.tls.cert.ServerCredentials;
 import org.spongycastle.cert.X509CertificateHolder;
 import org.spongycastle.crypto.tls.*;
-import org.spongycastle.util.Arrays;
 
 import java.io.IOException;
+import java.util.Hashtable;
 
 public class ProxyTlsServer extends TlsServerBase {
 
     private final ProxyCertificateProvider credentialsProvider;
-    private Certificate originalCertificate;
+    private ServerParameters serverParameters;
 
     public ProxyTlsServer(final ProxyCertificateProvider credentialsProvider) {
         this.credentialsProvider = credentialsProvider;
     }
 
-    public void setOriginalCertificate(final Certificate originalCertificate) {
-        this.originalCertificate = originalCertificate;
-    }
-
-    @Override
-    protected int[] getCipherSuites() {
-        // TODO: Use cipher suites negotiated upstream
-
-        return Arrays.concatenate(new int[]{
-                CipherSuite.DRAFT_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-        }, super.getCipherSuites());
-
-        /* // If ECC key:
-        return new int[] {
-                CipherSuite.DRAFT_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
-                CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256};*/
+    public void setParams(final ServerParameters serverParameters) {
+        this.serverParameters = serverParameters;
     }
 
     @Override
@@ -62,9 +47,29 @@ public class ProxyTlsServer extends TlsServerBase {
         return getForgedCredentials(SignatureAlgorithm.ecdsa);
     }
 
+    @Override
+    public ProtocolVersion getServerVersion() throws IOException {
+        return serverParameters.protocolVersion;
+    }
+
+    @Override
+    public short getSelectedCompressionMethod() throws IOException {
+        return serverParameters.compressionMethod;
+    }
+
+    @Override
+    public int getSelectedCipherSuite() throws IOException {
+        return serverParameters.cipherSuite;
+    }
+
+    @Override
+    public Hashtable getServerExtensions() throws IOException {
+        return serverParameters.extensions;
+    }
+
     private TlsSignerCredentials getForgedCredentials(final int signatureAlgorithm) throws IOException {
         final ServerCredentials credentials = credentialsProvider.cloneCertificate(signatureAlgorithm,
-                new X509CertificateHolder(originalCertificate.getCertificateAt(0)));
+                new X509CertificateHolder(serverParameters.originalCertificate.getCertificateAt(0)));
         return new DefaultTlsSignerCredentials(context, credentials.getCertificate(), credentials.getPrivateKey(),
                 getSignatureAndHashAlgorithm(credentials.getSignatureAlgorithm()));
     }

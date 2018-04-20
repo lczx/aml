@@ -21,6 +21,7 @@ import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.modules.tls.proxy.ClientParameters;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsClient;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsServer;
+import io.github.lczx.aml.modules.tls.proxy.ServerParameters;
 import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,8 +91,11 @@ class HttpsProxyConnectionHandler implements Runnable {
                 upstreamSocket.getInputStream(), upstreamSocket.getOutputStream(), CryptoUtils.createSecureRandom());
         upstreamTunnel.connect(tlsClient);
 
-        LOG.debug("Upstream connection established");
-        ((ProxyTlsServer) tlsServer).setOriginalCertificate(tlsClient.getOriginalCertificate());
+        final ServerParameters serverParams = tlsClient.makeServerParameters();
+        LOG.debug("Upstream connection established emulating downstream client parameters, " +
+                "using upstream Server Hello response to answer downstream (dSrv: {}, uSrv: {}, params: {}",
+                downstreamTunnel, upstreamTunnel, serverParams);
+        ((ProxyTlsServer) tlsServer).setParams(serverParams);
     }
 
     private class ProxyServerProtocol extends TlsServerProtocol {
