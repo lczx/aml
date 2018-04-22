@@ -22,7 +22,7 @@ import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.protocol.Link;
-import io.github.lczx.aml.tunnel.protocol.udp.LruCache;
+import io.github.lczx.aml.tunnel.protocol.LruCache;
 
 import java.util.ArrayList;
 import java.util.Iterator;

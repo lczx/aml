@@ -25,6 +25,7 @@ import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.UdpLayer;
 import io.github.lczx.aml.tunnel.protocol.Link;
+import io.github.lczx.aml.tunnel.protocol.LruCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

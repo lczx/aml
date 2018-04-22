@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.protocol;
 
 import java.util.LinkedHashMap;
 
