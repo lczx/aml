@@ -21,41 +21,47 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-class ReflectiveModuleLoader {
+public class ReflectiveModuleLoader {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReflectiveModuleLoader.class);
 
-    ModuleManager.ModuleHolder loadModule(final String moduleClassName) {
+    private final ModuleManager moduleManager;
+
+    public ReflectiveModuleLoader(final ModuleManager moduleManager) {
+        this.moduleManager = moduleManager;
+    }
+
+    public void addModules(final Class<? extends AMLTunnelModule>... classes) {
+        for (final Class<? extends AMLTunnelModule> clazz : classes) load(clazz);
+    }
+
+    public void addModules(final String... classNames) {
+        for (final String name : classNames) load(name);
+    }
+
+    private void load(final String moduleClassName) {
         try {
             final Class<?> moduleClass = Class.forName(moduleClassName);
-            if (!Arrays.asList(moduleClass.getInterfaces()).contains(AMLTunnelModule.class)) {
+            if (Arrays.asList(moduleClass.getInterfaces()).contains(AMLTunnelModule.class))
+                load(moduleClass);
+            else
                 LOG.error("Module \"{}\" does not implement AMLTunnelModule and will not be loaded");
-                return null;
-            }
-            return load(moduleClass);
         } catch (final ClassNotFoundException e) {
             LOG.error("Module \"{}\" was not found in the current class path", e);
-            return null;
         }
     }
 
-    ModuleManager.ModuleHolder loadModule(final Class<? extends AMLTunnelModule> moduleClass) {
-        return load(moduleClass);
-    }
-
-    private ModuleManager.ModuleHolder load(final Class<?> moduleClass) {
+    private void load(final Class<?> moduleClass) {
         final AMLModule ann = moduleClass.getAnnotation(AMLModule.class);
         if (ann == null) {
             LOG.error("Module \"{}\" is not annotated with @AMLModule and will not be loaded", moduleClass.getName());
-            return null;
+            return;
         }
 
         try {
-            return new ModuleManager.ModuleHolder(
-                    ann.name(), ann.priority(), (AMLTunnelModule) moduleClass.newInstance());
+            moduleManager.addModule(ann.name(), (AMLTunnelModule) moduleClass.newInstance(), ann.priority());
         } catch (final ReflectiveOperationException e) {
             LOG.error("Module \"" + moduleClass.getName() + "\" can not be instantiated", e);
-            return null;
         }
     }
 

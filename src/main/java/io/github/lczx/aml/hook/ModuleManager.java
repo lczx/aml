@@ -26,20 +26,9 @@ import java.util.TreeSet;
 public class ModuleManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ModuleManager.class);
-    private static final ReflectiveModuleLoader moduleLoader = new ReflectiveModuleLoader();
 
     private final HookRegistry hookRegistry = new HookRegistry();
     private final Set<ModuleHolder> modules = new TreeSet<>();
-
-    public void addModules(final Class<? extends AMLTunnelModule>... classes) {
-        for (final Class<? extends AMLTunnelModule> clazz : classes)
-            initializeModule(moduleLoader.loadModule(clazz));
-    }
-
-    public void addModules(final String... classNames) {
-        for (final String name : classNames)
-            initializeModule(moduleLoader.loadModule(name));
-    }
 
     public void startModules(final AMLContext amlContext) {
         for (final ModuleHolder m : modules)
@@ -51,19 +40,18 @@ public class ModuleManager {
             m.moduleInstance.onStop();
     }
 
-    private void initializeModule(final ModuleHolder module) {
-        if (module == null) return;
-        module.moduleInstance.initialize(hookRegistry);
-        modules.add(module);
-        LOG.debug("Loaded module\"{}\", priority {}", module.name, module.priority);
+    public void addModule(final String name, final AMLTunnelModule module, final int priority) {
+        module.initialize(hookRegistry);
+        modules.add(new ModuleHolder(name, priority, module));
+        LOG.debug("Loaded module\"{}\", priority {}", name, priority);
     }
 
-    /* package */ static class ModuleHolder implements Comparable<ModuleHolder> {
+    private static class ModuleHolder implements Comparable<ModuleHolder> {
         private final String name;
         private final int priority;
         private final AMLTunnelModule moduleInstance;
 
-        /* package */ ModuleHolder(final String name, final int priority, final AMLTunnelModule moduleInstance) {
+        private ModuleHolder(final String name, final int priority, final AMLTunnelModule moduleInstance) {
             this.name = name;
             this.priority = priority;
             this.moduleInstance = moduleInstance;
