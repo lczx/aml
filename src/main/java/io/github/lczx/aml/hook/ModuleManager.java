@@ -46,6 +46,10 @@ public class ModuleManager {
         LOG.debug("Loaded module\"{}\", priority {}", name, priority);
     }
 
+    public HookRegistry getHookRegistry() {
+        return hookRegistry;
+    }
+
     private static class ModuleHolder implements Comparable<ModuleHolder> {
         private final String name;
         private final int priority;
