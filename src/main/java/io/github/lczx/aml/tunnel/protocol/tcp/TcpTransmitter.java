@@ -24,6 +24,7 @@ import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
+import io.github.lczx.aml.tunnel.protocol.Link;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,11 +100,11 @@ class TcpTransmitter implements Runnable {
                 ip.getDestinationAddress(), tcp.getDestinationPort());
 
         // Check if we have an open connection already
-        final String registryKey = SessionRegistry.buildKey(dstSock, tcp.getSourcePort());
+        final Link registryKey = new Link(tcp.getSourcePort(), dstSock);
         final Connection connection = sessionRegistry.getConnection(registryKey);
         if (connection == null) {
             // Not connected, establish new
-            initializeConnection(registryKey, currentPacket, dstSock);
+            initializeConnection(registryKey, currentPacket);
         } else if (tcp.isSYN()) {
             // We got a SYN after the connection was established
             processDuplicateSYN(connection, currentPacket);
@@ -119,7 +120,7 @@ class TcpTransmitter implements Runnable {
         }
     }
 
-    private void initializeConnection(final String registryKey, final Packet packet, InetSocketAddress dstSock)
+    private void initializeConnection(final Link registryKey, final Packet packet)
             throws IOException {
         final IPv4Layer ip = (IPv4Layer) packet.getFirstLayer();
         final TcpLayer tcp = (TcpLayer) ip.getNextLayer();
@@ -137,7 +138,7 @@ class TcpTransmitter implements Runnable {
         outChannel.socket().bind(null);
         amlContext.getSocketProtector().protect(outChannel.socket());
 
-        dstSock = __hook.onConnect(dstSock, outChannel.socket().getLocalPort());
+        final InetSocketAddress dstSock = __hook.onConnect(registryKey.destination, outChannel.socket().getLocalPort());
 
         final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);

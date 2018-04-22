@@ -18,6 +18,7 @@ package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.packet.Packet;
+import io.github.lczx.aml.tunnel.protocol.Link;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -25,7 +26,7 @@ import java.nio.channels.SocketChannel;
 
 public class Connection {
 
-    private final String registryKey;
+    private final Link registryKey;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
 
@@ -33,13 +34,13 @@ public class Connection {
     private SelectionKey selectionKey;
     private Packet packetAttachment;
 
-    public Connection(final String registryKey, final TCB tcb, final SocketChannel upstreamChannel) {
+    public Connection(final Link registryKey, final TCB tcb, final SocketChannel upstreamChannel) {
         this.registryKey = registryKey;
         this.tcb = tcb;
         this.upstreamChannel = upstreamChannel;
     }
 
-    public String getRegistryKey() {
+    public Link getRegistryKey() {
         return registryKey;
     }
 
@@ -93,4 +94,5 @@ public class Connection {
                 ", packetAttachment=" + packetAttachment +
                 '}';
     }
+
 }
