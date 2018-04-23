@@ -23,12 +23,17 @@ import io.github.lczx.aml.tunnel.protocol.Link;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Connection {
+
+    public static final String EXTRA_ADDRESS_REDIRECT = "redirect-address";
 
     private final Link registryKey;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
+    private final Map<String, Object> extra = new HashMap<>();
 
     private boolean waitingForNetworkData;
     private SelectionKey selectionKey;
@@ -76,6 +81,15 @@ public class Connection {
         this.packetAttachment = packetAttachment;
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> T getExtra(final String key) {
+        return (T) extra.get(key);
+    }
+
+    public void putExtra(final String key, final Object value) {
+        extra.put(key, value);
+    }
+
     void closeUpstreamChannel() { // Used only by session registry
         IOUtils.safeClose(upstreamChannel);
     }
@@ -92,6 +106,7 @@ public class Connection {
                 ", upstreamChannel=" + sockStatus + ' ' + localSockAddr + ' ' + remoteSockAddr +
                 ", wait=" + waitingForNetworkData +
                 ", packetAttachment=" + packetAttachment +
+                ", extra=" + extra +
                 '}';
     }
 
