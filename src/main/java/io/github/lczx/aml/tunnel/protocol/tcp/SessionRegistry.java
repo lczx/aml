@@ -16,7 +16,6 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
-import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
@@ -40,14 +39,11 @@ public class SessionRegistry {
         }
     });
 
-    private DraftTcpHook __hook;
+    private final AMLContext amlContext;
 
     /* package */ SessionRegistry(final AMLContext amlContext) {
+        this.amlContext = amlContext;
         amlContext.getStatusMonitor().attachProbe(new TcpSessionProbe());
-    }
-
-    public void __setHook(final DraftTcpHook hook) {
-        this.__hook = hook;
     }
 
     /* package */ Connection getConnection(final Link key) {
@@ -63,7 +59,7 @@ public class SessionRegistry {
     }
 
     /* package */ void closeConnection(final Connection connection) {
-        __hook.onClose(connection);
+        amlContext.getEventDispatcher().sendEvent(new TcpCloseConnectionEvent(connection));
         connection.closeUpstreamChannel();
         synchronized (connCache) {
             connCache.remove(connection.getRegistryKey());

@@ -22,10 +22,11 @@ import android.net.VpnService;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
-import io.github.lczx.aml.modules.tls.TlsProxy;
 import eu.faircode.netguard.IPUtil;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.AMLContextImpl;
+import io.github.lczx.aml.hook.ModuleManager;
+import io.github.lczx.aml.hook.ReflectiveModuleLoader;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
@@ -60,12 +61,11 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     private ParcelFileDescriptor vpnInterface;
 
     private AMLContext amlContext;
+    private ModuleManager moduleManager;
 
     private ConcurrentPacketConnector tcpTxPipe, udpTxPipe, rxPipe;
     private ProtocolNetworkInterface tcpNetworkInterface, udpNetworkInterface;
     private Thread vpnThread;
-
-    private TlsProxy proxy;
 
     /**
      * {@code true} if an instance of this service has been created.
@@ -153,8 +153,10 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
-        proxy = new TlsProxy(amlContext, getAssets());
-        proxy.start();
+        moduleManager = new ModuleManager(amlContext);
+        new ReflectiveModuleLoader(moduleManager)
+                .addModules("io.github.lczx.aml.modules.tls.TlsProxy");
+        moduleManager.startModules();
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
@@ -169,15 +171,13 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             LOG.error("Selector initialization failed", e);
             cleanup();
             stopSelf();
-            return;
+            //return;
         }
-
-        ((TcpNetworkInterface) tcpNetworkInterface).__setHook(proxy.createTcpHook());
     }
 
     private void stopVPN() {
         if (amlContext != null) {
-            proxy.stop();
+            moduleManager.stopModules();
             vpnThread.interrupt();
             tcpNetworkInterface.shutdown();
             udpNetworkInterface.shutdown();
@@ -186,7 +186,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void cleanup() {
-        proxy = null;
+        moduleManager = null;
         tcpTxPipe = null;
         udpTxPipe = null;
         rxPipe = null;

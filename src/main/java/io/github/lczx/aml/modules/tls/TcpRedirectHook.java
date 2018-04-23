@@ -16,15 +16,18 @@
 
 package io.github.lczx.aml.modules.tls;
 
-import io.github.lczx.aml.hook.DraftTcpHook;
+import io.github.lczx.aml.hook.AMLEvent;
+import io.github.lczx.aml.hook.AMLEventListener;
 import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpCloseConnectionEvent;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-public class TcpRedirectHook implements DraftTcpHook {
+/* package */ class TcpRedirectHook implements AMLEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpRedirectHook.class);
 
@@ -33,27 +36,34 @@ public class TcpRedirectHook implements DraftTcpHook {
 
     private InetSocketAddress proxyAddress;
 
-    TcpRedirectHook(final RouteTable routes, final ProxyServerLoop serverRunnable) {
+    /* package */ TcpRedirectHook(final RouteTable routes, final ProxyServerLoop serverRunnable) {
         this.routes = routes;
         this.serverRunnable = serverRunnable;
     }
 
     @Override
-    public InetSocketAddress onConnect(final InetSocketAddress destination, final int localPort) {
+    public void receiveEvent(final AMLEvent event) {
+        if (event instanceof TcpNewConnectionEvent)
+            onConnect((TcpNewConnectionEvent) event);
+        else if (event instanceof TcpCloseConnectionEvent)
+            onClose((TcpCloseConnectionEvent) event);
+    }
+
+    private void onConnect(final TcpNewConnectionEvent event) {
+        final InetSocketAddress destination = event.getConnection().getRegistryKey().destination;
+        final int localPort = event.getLocalPort();
+
         // Redirect connections to port 443 (HTTPS)
         if (destination.getPort() == 443) {
             LOG.debug("Intercepted connection from TCP relay port ({}) to HTTPS standard port (443), rerouting " +
                     "destination to proxy ({} becomes {})", localPort, destination, getProxyAddress());
             routes.addRoute(localPort, destination, RouteTable.TYPE_HTTPS);
-            return getProxyAddress();
+            event.getConnection().putExtra(Connection.EXTRA_ADDRESS_REDIRECT, getProxyAddress());
         }
-
-        return destination;
     }
 
-    @Override
-    public void onClose(final Connection connection) {
-        routes.removeRoute(connection.getUpstreamChannel().socket().getLocalPort());
+    private void onClose(final TcpCloseConnectionEvent event) {
+        routes.removeRoute(event.getConnection().getUpstreamChannel().socket().getLocalPort());
     }
 
     private InetSocketAddress getProxyAddress() {

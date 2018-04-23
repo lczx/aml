@@ -17,7 +17,6 @@
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.AMLContext;
-import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
@@ -48,8 +47,6 @@ class TcpTransmitter implements Runnable {
     private final SessionRegistry sessionRegistry;
     private final AMLContext amlContext;
 
-    private DraftTcpHook __hook;
-
     TcpTransmitter(final Selector networkSelector, final PacketSource packetSource, final PacketSink packetSink,
                    final SessionRegistry sessionRegistry, final AMLContext amlContext) {
         this.networkSelector = networkSelector;
@@ -57,10 +54,6 @@ class TcpTransmitter implements Runnable {
         this.packetSink = packetSink;
         this.sessionRegistry = sessionRegistry;
         this.amlContext = amlContext;
-    }
-
-    public void __setHook(final DraftTcpHook hook) {
-        this.__hook = hook;
     }
 
     @Override
@@ -138,12 +131,15 @@ class TcpTransmitter implements Runnable {
         outChannel.socket().bind(null);
         amlContext.getSocketProtector().protect(outChannel.socket());
 
-        final InetSocketAddress dstSock = __hook.onConnect(registryKey.destination, outChannel.socket().getLocalPort());
-
         final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);
         connection.getTcb().localAckN++; // SYN counts as a byte
         sessionRegistry.putConnection(connection);
+
+        amlContext.getEventDispatcher().sendEvent(
+                new TcpNewConnectionEvent(connection, outChannel.socket().getLocalPort()));
+        InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_ADDRESS_REDIRECT);
+        if (dstSock == null) dstSock = registryKey.destination;
 
         try {
             // Attempt connection
