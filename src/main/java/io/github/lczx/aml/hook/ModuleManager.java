@@ -45,7 +45,11 @@ public class ModuleManager {
     }
 
     public void addModule(final String name, final AMLTunnelModule module, final int priority) {
-        module.initialize(amlContext);
+        try {
+            module.initialize(amlContext);
+        } catch (final Exception e) {
+            LOG.error("Caught exception while initializing module " + module + ", will not be loaded", e);
+        }
         modules.add(new ModuleHolder(name, priority, module));
         LOG.debug("Loaded module\"{}\", priority {}", name, priority);
     }

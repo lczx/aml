@@ -20,7 +20,7 @@ import io.github.lczx.aml.AMLContext;
 
 public interface AMLTunnelModule {
 
-    void initialize(AMLContext amlContext);
+    void initialize(AMLContext amlContext) throws Exception;
 
     void onStart();
 

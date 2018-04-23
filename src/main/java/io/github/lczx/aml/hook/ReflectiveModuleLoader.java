@@ -31,7 +31,8 @@ public class ReflectiveModuleLoader {
         this.moduleManager = moduleManager;
     }
 
-    public void addModules(final Class<? extends AMLTunnelModule>... classes) {
+    @SafeVarargs
+    public final void addModules(final Class<? extends AMLTunnelModule>... classes) {
         for (final Class<? extends AMLTunnelModule> clazz : classes) load(clazz);
     }
 
