@@ -51,7 +51,7 @@ public class ModuleManager {
             LOG.error("Caught exception while initializing module " + module + ", will not be loaded", e);
         }
         modules.add(new ModuleHolder(name, priority, module));
-        LOG.debug("Loaded module\"{}\", priority {}", name, priority);
+        LOG.debug("Loaded module \"{}\", priority {}", name, priority);
     }
 
     private static class ModuleHolder implements Comparable<ModuleHolder> {
@@ -67,7 +67,8 @@ public class ModuleManager {
 
         @Override
         public int compareTo(final ModuleHolder o) {
-            return this.priority - o.priority;
+            final int delta = this.priority - o.priority;
+            return delta != 0 ? delta : 1; // If the two have the same priority, put the new one after
         }
     }
 

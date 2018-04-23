@@ -44,8 +44,8 @@ public class EventDispatcher {
 
     public void sendEvent(final AMLEvent event) {
         for (final ListenerWrapper lw : getListeners(event.getClass())) {
+            LOG.trace("Sending {} to {} (priority: {})", event, lw.listener, lw.priority);
             lw.listener.receiveEvent(event);
-            LOG.trace("Sent {} to {} (priority: {})", event, lw.listener, lw.priority);
         }
     }
 
@@ -69,7 +69,8 @@ public class EventDispatcher {
 
         @Override
         public int compareTo(final ListenerWrapper o) {
-            return priority - o.priority;
+            final int delta = this.priority - o.priority;
+            return delta != 0 ? delta : 1; // If the two have the same priority, put the new one after
         }
     }
 
