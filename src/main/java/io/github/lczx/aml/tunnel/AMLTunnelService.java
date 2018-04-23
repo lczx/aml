@@ -154,8 +154,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
         moduleManager = new ModuleManager(amlContext);
-        new ReflectiveModuleLoader(moduleManager)
-                .addModules("io.github.lczx.aml.modules.tls.TlsProxy");
+        new ReflectiveModuleLoader(moduleManager).addModules(
+                "io.github.lczx.aml.modules.tls.TlsProxy", "io.github.lczx.aml.modules.uid.UidModule");
         moduleManager.startModules();
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
