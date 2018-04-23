@@ -51,7 +51,7 @@ import java.net.InetSocketAddress;
 
     private void onConnect(final TcpNewConnectionEvent event) {
         final InetSocketAddress destination = event.getConnection().getLink().destination;
-        final int localPort = event.getLocalPort();
+        final int localPort = event.getLocalRelayPort();
 
         // Redirect connections to port 443 (HTTPS)
         if (destination.getPort() == 443) {
