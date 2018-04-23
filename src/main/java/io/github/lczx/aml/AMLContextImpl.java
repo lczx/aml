@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml;
 
+import io.github.lczx.aml.hook.EventDispatcher;
 import io.github.lczx.aml.hook.monitoring.StatusMonitor;
 import io.github.lczx.aml.tunnel.AMLTunnelService;
 import io.github.lczx.aml.tunnel.SocketProtector;
@@ -24,6 +25,7 @@ public class AMLContextImpl implements AMLContext {
 
     private final AMLTunnelService tunnelService;
     private final StatusMonitor statusMonitor = new StatusMonitor();
+    private final EventDispatcher eventDispatcher = new EventDispatcher();
 
     public AMLContextImpl(final AMLTunnelService tunnelService) {
         this.tunnelService = tunnelService;
@@ -37,6 +39,11 @@ public class AMLContextImpl implements AMLContext {
     @Override
     public StatusMonitor getStatusMonitor() {
         return statusMonitor;
+    }
+
+    @Override
+    public EventDispatcher getEventDispatcher() {
+        return eventDispatcher;
     }
 
 }

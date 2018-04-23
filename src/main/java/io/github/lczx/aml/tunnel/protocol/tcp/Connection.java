@@ -18,28 +18,34 @@ package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.packet.Packet;
+import io.github.lczx.aml.tunnel.protocol.Link;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Connection {
 
-    private final String registryKey;
+    public static final String EXTRA_ADDRESS_REDIRECT = "redirect-address";
+
+    private final Link registryKey;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
+    private final Map<String, Object> extra = new HashMap<>();
 
     private boolean waitingForNetworkData;
     private SelectionKey selectionKey;
     private Packet packetAttachment;
 
-    public Connection(final String registryKey, final TCB tcb, final SocketChannel upstreamChannel) {
+    public Connection(final Link registryKey, final TCB tcb, final SocketChannel upstreamChannel) {
         this.registryKey = registryKey;
         this.tcb = tcb;
         this.upstreamChannel = upstreamChannel;
     }
 
-    public String getRegistryKey() {
+    public Link getLink() {
         return registryKey;
     }
 
@@ -75,6 +81,15 @@ public class Connection {
         this.packetAttachment = packetAttachment;
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> T getExtra(final String key) {
+        return (T) extra.get(key);
+    }
+
+    public void putExtra(final String key, final Object value) {
+        extra.put(key, value);
+    }
+
     void closeUpstreamChannel() { // Used only by session registry
         IOUtils.safeClose(upstreamChannel);
     }
@@ -91,6 +106,8 @@ public class Connection {
                 ", upstreamChannel=" + sockStatus + ' ' + localSockAddr + ' ' + remoteSockAddr +
                 ", wait=" + waitingForNetworkData +
                 ", packetAttachment=" + packetAttachment +
+                ", extra=" + extra +
                 '}';
     }
+
 }

@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.hook;
+package io.github.lczx.aml.tunnel.protocol.tcp;
 
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
+import io.github.lczx.aml.hook.AMLEvent;
 
-import java.net.InetSocketAddress;
+public class TcpNewConnectionEvent extends AMLEvent {
 
-public interface DraftTcpHook {
+    private final Connection connection;
+    private final int localRelayPort;
 
-    InetSocketAddress onConnect(InetSocketAddress destination, int localPort);
+    /* package */ TcpNewConnectionEvent(final Connection connection, final int localRelayPort) {
+        this.connection = connection;
+        this.localRelayPort = localRelayPort;
+    }
 
-    void onClose(Connection connection);
+    public Connection getConnection() {
+        return connection;
+    }
+
+    public int getLocalRelayPort() {
+        return localRelayPort;
+    }
 
 }

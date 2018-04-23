@@ -18,21 +18,30 @@ package io.github.lczx.aml.modules.tls;
 
 import android.content.res.AssetManager;
 import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.AMLModule;
+import io.github.lczx.aml.hook.AMLTunnelModule;
 import io.github.lczx.aml.modules.tls.cert.CredentialsLoader;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
+import io.github.lczx.aml.tunnel.AMLTunnelService;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpCloseConnectionEvent;
+import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
 
 import java.io.IOException;
 
-public class TlsProxy {
+@AMLModule(name = "TLS Proxy")
+public class TlsProxy implements AMLTunnelModule {
 
-    private final RouteTable proxyRoutes;
-    private final ProxyServerLoop serverRunnable;
-    private final Thread serverThread;
+    private ProxyServerLoop serverRunnable;
+    private Thread serverThread;
 
-    public TlsProxy(final AMLContext amlContext, final AssetManager assetManager) {
-        proxyRoutes = new RouteTable(amlContext);
+    @Override
+    public void initialize(final AMLContext amlContext) {
+        final RouteTable proxyRoutes = new RouteTable(amlContext);
+
+        // TODO: HAAAX (Will probably be no longer required once we generate our own CAs)
+        final AssetManager assetManager = ((AMLTunnelService) amlContext.getSocketProtector()).getAssets();
 
         final ProxyCertificateProvider certificateProvider;
         try {
@@ -45,19 +54,20 @@ public class TlsProxy {
 
         serverRunnable = new ProxyServerLoop(proxyRoutes, certificateProvider, amlContext.getSocketProtector());
         serverThread = new Thread(serverRunnable, "pxy_server");
+
+        amlContext.getEventDispatcher().addEventListener(new TcpRedirectHook(proxyRoutes, serverRunnable),
+                TcpNewConnectionEvent.class, TcpCloseConnectionEvent.class);
     }
 
-    public void start() {
+    @Override
+    public void onStart() {
         serverThread.start();
     }
 
-    public void stop() {
+    @Override
+    public void onStop() {
         serverThread.interrupt();
         serverRunnable.closeServerSocket();
-    }
-
-    public TcpRedirectHook createTcpHook() {
-        return new TcpRedirectHook(proxyRoutes, serverRunnable);
     }
 
 }

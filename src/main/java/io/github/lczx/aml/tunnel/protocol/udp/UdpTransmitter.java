@@ -24,6 +24,8 @@ import io.github.lczx.aml.tunnel.PacketSource;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.UdpLayer;
+import io.github.lczx.aml.tunnel.protocol.Link;
+import io.github.lczx.aml.tunnel.protocol.LruCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +48,10 @@ class UdpTransmitter implements Runnable {
     private final PacketSource packetSource;
     private final AMLContext amlContext;
 
-    private final LruCache<String, DatagramChannel> channelCache =
-            new LruCache<>(MAX_CACHE_SIZE, new LruCache.RemoveCallback<String, DatagramChannel>() {
+    private final LruCache<Link, DatagramChannel> channelCache =
+            new LruCache<>(MAX_CACHE_SIZE, new LruCache.RemoveCallback<Link, DatagramChannel>() {
                 @Override
-                public void onRemove(final Map.Entry<String, DatagramChannel> eldest) {
+                public void onRemove(final Map.Entry<Link, DatagramChannel> eldest) {
                     closeChannel(eldest.getValue());
                 }
             });
@@ -87,7 +89,7 @@ class UdpTransmitter implements Runnable {
                         ip.getDestinationAddress(), udp.getDestinationPort());
 
                 // Use a channel in cache if present
-                final String cacheKey = buildCacheKey(dstSock, udp.getSourcePort());
+                final Link cacheKey = new Link(udp.getSourcePort(), dstSock);
                 DatagramChannel outChannel;
                 synchronized (channelCache) {
                     outChannel = channelCache.get(cacheKey);
@@ -154,16 +156,12 @@ class UdpTransmitter implements Runnable {
 
     private void closeAll() {
         synchronized (channelCache) {
-            final Iterator<Map.Entry<String, DatagramChannel>> it = channelCache.entrySet().iterator();
+            final Iterator<Map.Entry<Link, DatagramChannel>> it = channelCache.entrySet().iterator();
             while (it.hasNext()) {
                 closeChannel(it.next().getValue());
                 it.remove();
             }
         }
-    }
-
-    private static String buildCacheKey(final InetSocketAddress destination, final int sourcePort) {
-        return destination.getAddress().getHostAddress() + ':' + destination.getPort() + ':' + sourcePort;
     }
 
     private class UdpTxProbe implements StatusProbe {
@@ -172,7 +170,7 @@ class UdpTransmitter implements Runnable {
             // Note: this runs on the main thread
             synchronized (channelCache) {
                 final ArrayList<String> l = new ArrayList<>(channelCache.size());
-                for (final Map.Entry<String, DatagramChannel> i : channelCache.entrySet())
+                for (final Map.Entry<Link, DatagramChannel> i : channelCache.entrySet())
                     l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
 
                 m.putStringArray(BaseMeasureKeys.UDP_SOCK_CACHE_DUMP, l.toArray(new String[0]));

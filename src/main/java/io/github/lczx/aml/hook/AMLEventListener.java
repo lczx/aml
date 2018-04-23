@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml;
+package io.github.lczx.aml.hook;
 
-import io.github.lczx.aml.hook.EventDispatcher;
-import io.github.lczx.aml.hook.monitoring.StatusMonitor;
-import io.github.lczx.aml.tunnel.SocketProtector;
+public interface AMLEventListener {
 
-public interface AMLContext {
-
-    SocketProtector getSocketProtector();
-
-    StatusMonitor getStatusMonitor();
-
-    EventDispatcher getEventDispatcher();
+    void receiveEvent(AMLEvent event);
 
 }

@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml;
+package io.github.lczx.aml.tunnel.protocol.tcp;
 
-import io.github.lczx.aml.hook.EventDispatcher;
-import io.github.lczx.aml.hook.monitoring.StatusMonitor;
-import io.github.lczx.aml.tunnel.SocketProtector;
+import io.github.lczx.aml.hook.AMLEvent;
 
-public interface AMLContext {
+public class TcpCloseConnectionEvent extends AMLEvent {
 
-    SocketProtector getSocketProtector();
+    private final Connection connection;
 
-    StatusMonitor getStatusMonitor();
+    /* package */ TcpCloseConnectionEvent(final Connection connection) {
+        this.connection = connection;
+    }
 
-    EventDispatcher getEventDispatcher();
+    public Connection getConnection() {
+        return connection;
+    }
 
 }

@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml;
+package io.github.lczx.aml.hook;
 
-import io.github.lczx.aml.hook.EventDispatcher;
-import io.github.lczx.aml.hook.monitoring.StatusMonitor;
-import io.github.lczx.aml.tunnel.SocketProtector;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface AMLContext {
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface AMLModule {
+    String name();
 
-    SocketProtector getSocketProtector();
-
-    StatusMonitor getStatusMonitor();
-
-    EventDispatcher getEventDispatcher();
-
+    int priority() default 100;
 }
+

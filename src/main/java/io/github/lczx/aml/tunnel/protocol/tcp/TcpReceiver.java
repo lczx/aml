@@ -98,7 +98,7 @@ class TcpReceiver implements Runnable {
 
         } catch (final IOException e) {
             // Got an error, reset the connection, use packet attachment, strip options
-            LOG.error("I/O exception on channel connect: " + connection.getRegistryKey(), e);
+            LOG.error("I/O exception on channel connect: " + connection.getLink(), e);
             TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_RST,
                     0, connection.getTcb().localAckN, false);
             sessionRegistry.closeConnection(connection);
@@ -119,7 +119,7 @@ class TcpReceiver implements Runnable {
             try {
                 readBytes = inputChannel.read(editor.buffer(true));
             } catch (final IOException e) {
-                LOG.error("Network read error: " + connection.getRegistryKey(), e);
+                LOG.error("Network read error: " + connection.getLink(), e);
                 editor.clearContent();
 
                 TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_RST,

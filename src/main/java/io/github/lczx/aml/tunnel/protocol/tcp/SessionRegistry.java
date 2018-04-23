@@ -16,14 +16,13 @@
 
 package io.github.lczx.aml.tunnel.protocol.tcp;
 
-import io.github.lczx.aml.hook.DraftTcpHook;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
-import io.github.lczx.aml.tunnel.protocol.udp.LruCache;
+import io.github.lczx.aml.tunnel.protocol.Link;
+import io.github.lczx.aml.tunnel.protocol.LruCache;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
@@ -32,25 +31,22 @@ public class SessionRegistry {
 
     private static final int MAX_CACHE_SIZE = 64; // TODO: Is this ideal?
 
-    private final LruCache<String, Connection> connCache = new LruCache<>(MAX_CACHE_SIZE,
-            new LruCache.RemoveCallback<String, Connection>() {
+    private final LruCache<Link, Connection> connCache = new LruCache<>(MAX_CACHE_SIZE,
+            new LruCache.RemoveCallback<Link, Connection>() {
         @Override
-        public void onRemove(final Map.Entry<String, Connection> eldest) {
+        public void onRemove(final Map.Entry<Link, Connection> eldest) {
             eldest.getValue().closeUpstreamChannel();
         }
     });
 
-    private DraftTcpHook __hook;
+    private final AMLContext amlContext;
 
     /* package */ SessionRegistry(final AMLContext amlContext) {
+        this.amlContext = amlContext;
         amlContext.getStatusMonitor().attachProbe(new TcpSessionProbe());
     }
 
-    public void __setHook(final DraftTcpHook hook) {
-        this.__hook = hook;
-    }
-
-    /* package */ Connection getConnection(final String key) {
+    /* package */ Connection getConnection(final Link key) {
         synchronized (connCache) {
             return connCache.get(key);
         }
@@ -58,21 +54,21 @@ public class SessionRegistry {
 
     /* package */ void putConnection(final Connection connection) {
         synchronized (connCache) {
-            connCache.put(connection.getRegistryKey(), connection);
+            connCache.put(connection.getLink(), connection);
         }
     }
 
     /* package */ void closeConnection(final Connection connection) {
-        __hook.onClose(connection);
+        amlContext.getEventDispatcher().sendEvent(new TcpCloseConnectionEvent(connection));
         connection.closeUpstreamChannel();
         synchronized (connCache) {
-            connCache.remove(connection.getRegistryKey());
+            connCache.remove(connection.getLink());
         }
     }
 
     /* package */ void closeAll() {
         synchronized (connCache) {
-            final Iterator<Map.Entry<String, Connection>> it = connCache.entrySet().iterator();
+            final Iterator<Map.Entry<Link, Connection>> it = connCache.entrySet().iterator();
             while (it.hasNext()) {
                 it.next().getValue().closeUpstreamChannel();
                 it.remove();
@@ -89,17 +85,12 @@ public class SessionRegistry {
         }
     }
 
-    // TODO: Fix nice code duplication from UDP transmitter
-    /* package */ static String buildKey(final InetSocketAddress destination, final int sourcePort) {
-        return destination.getAddress().getHostAddress() + ':' + destination.getPort() + ':' + sourcePort;
-    }
-
     private class TcpSessionProbe implements StatusProbe {
         @Override
         public void onMeasure(final MeasureHolder m) {
             // Note: this runs on the main thread
             final ArrayList<String> l = new ArrayList<>(connCache.size());
-            for (final Map.Entry<String, Connection> i : connCache.entrySet())
+            for (final Map.Entry<Link, Connection> i : connCache.entrySet())
                 l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
 
             m.putStringArray(BaseMeasureKeys.TCP_CONN_CACHE_DUMP, l.toArray(new String[0]));
