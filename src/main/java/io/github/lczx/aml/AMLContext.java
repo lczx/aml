@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml;
 
+import io.github.lczx.aml.hook.EventDispatcher;
 import io.github.lczx.aml.hook.monitoring.StatusMonitor;
 import io.github.lczx.aml.tunnel.SocketProtector;
 
@@ -24,5 +25,7 @@ public interface AMLContext {
     SocketProtector getSocketProtector();
 
     StatusMonitor getStatusMonitor();
+
+    EventDispatcher getEventDispatcher();
 
 }

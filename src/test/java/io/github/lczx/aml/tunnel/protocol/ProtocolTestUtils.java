@@ -17,6 +17,7 @@
 package io.github.lczx.aml.tunnel.protocol;
 
 import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.EventDispatcher;
 import io.github.lczx.aml.hook.monitoring.StatusMonitor;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
@@ -74,6 +75,7 @@ public final class ProtocolTestUtils {
 
         private final SocketProtector socketProtector = new ProtocolTestUtils.DummySocketProtector();
         private final StatusMonitor statusMonitor = new StatusMonitor();
+        private final EventDispatcher eventDispatcher = new EventDispatcher();
 
         @Override
         public SocketProtector getSocketProtector() {
@@ -83,6 +85,11 @@ public final class ProtocolTestUtils {
         @Override
         public StatusMonitor getStatusMonitor() {
             return statusMonitor;
+        }
+
+        @Override
+        public EventDispatcher getEventDispatcher() {
+            return eventDispatcher;
         }
 
     }
