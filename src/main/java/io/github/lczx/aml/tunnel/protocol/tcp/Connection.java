@@ -45,7 +45,7 @@ public class Connection {
         this.upstreamChannel = upstreamChannel;
     }
 
-    public Link getRegistryKey() {
+    public Link getLink() {
         return registryKey;
     }
 

@@ -286,7 +286,7 @@ class TcpTransmitter implements Runnable {
                 final ByteBuffer payload = tcp.getPayloadBufferView();
                 while (payload.hasRemaining()) connection.getUpstreamChannel().write(payload);
             } catch (final IOException e) {
-                LOG.error("Network write error: " + connection.getRegistryKey(), e);
+                LOG.error("Network write error: " + connection.getLink(), e);
                 sendRSTAndClose(connection, payloadSize, packet);
                 return;
             }

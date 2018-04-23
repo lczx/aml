@@ -54,7 +54,7 @@ public class SessionRegistry {
 
     /* package */ void putConnection(final Connection connection) {
         synchronized (connCache) {
-            connCache.put(connection.getRegistryKey(), connection);
+            connCache.put(connection.getLink(), connection);
         }
     }
 
@@ -62,7 +62,7 @@ public class SessionRegistry {
         amlContext.getEventDispatcher().sendEvent(new TcpCloseConnectionEvent(connection));
         connection.closeUpstreamChannel();
         synchronized (connCache) {
-            connCache.remove(connection.getRegistryKey());
+            connCache.remove(connection.getLink());
         }
     }
 
