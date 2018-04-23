@@ -20,9 +20,9 @@ import io.github.lczx.aml.AMLContext;
 
 public interface AMLTunnelModule {
 
-    void initialize(HookRegistry hookRegistry);
+    void initialize(AMLContext amlContext);
 
-    void onStart(AMLContext amlContext);
+    void onStart();
 
     void onStop();
 

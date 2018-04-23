@@ -27,12 +27,16 @@ public class ModuleManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ModuleManager.class);
 
-    private final HookRegistry hookRegistry = new HookRegistry();
+    private final AMLContext amlContext;
     private final Set<ModuleHolder> modules = new TreeSet<>();
 
-    public void startModules(final AMLContext amlContext) {
+    public ModuleManager(final AMLContext amlContext) {
+        this.amlContext = amlContext;
+    }
+
+    public void startModules() {
         for (final ModuleHolder m : modules)
-            m.moduleInstance.onStart(amlContext);
+            m.moduleInstance.onStart();
     }
 
     public void stopModules() {
@@ -41,13 +45,9 @@ public class ModuleManager {
     }
 
     public void addModule(final String name, final AMLTunnelModule module, final int priority) {
-        module.initialize(hookRegistry);
+        module.initialize(amlContext);
         modules.add(new ModuleHolder(name, priority, module));
         LOG.debug("Loaded module\"{}\", priority {}", name, priority);
-    }
-
-    public HookRegistry getHookRegistry() {
-        return hookRegistry;
     }
 
     private static class ModuleHolder implements Comparable<ModuleHolder> {

@@ -16,14 +16,8 @@
 
 package io.github.lczx.aml.hook;
 
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
+public interface AMLEventListener {
 
-import java.net.InetSocketAddress;
-
-public interface DraftTcpHook {
-
-    InetSocketAddress onConnect(InetSocketAddress destination, int localPort);
-
-    void onClose(Connection connection);
+    void receiveEvent(AMLEvent event);
 
 }

@@ -16,8 +16,4 @@
 
 package io.github.lczx.aml.hook;
 
-public interface HookProcedure {
-
-    void onEnter(Object... args);
-
-}
+public abstract class AMLEvent { }
