@@ -56,6 +56,7 @@ public class SessionRegistry {
         synchronized (connCache) {
             connCache.put(connection.getLink(), connection);
         }
+        amlContext.getEventDispatcher().sendEvent(new TcpNewConnectionEvent(connection));
     }
 
     /* package */ void closeConnection(final Connection connection) {

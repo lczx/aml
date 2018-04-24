@@ -49,7 +49,8 @@ public class TcpNetworkInterface extends ProtocolNetworkInterface {
 
     @Override
     protected Runnable createTransmitterRunnable(final Selector networkSelector) {
-        return new TcpTransmitter(networkSelector, packetSource, packetDestination, sessionRegistry, amlContext);
+        return new TcpTransmitter(networkSelector,
+                packetSource, packetDestination, sessionRegistry, amlContext.getSocketProtector());
     }
 
     @Override
