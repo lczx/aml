@@ -44,26 +44,26 @@ import java.net.InetSocketAddress;
     @Override
     public void receiveEvent(final AMLEvent event) {
         if (event instanceof TcpNewConnectionEvent)
-            onConnect((TcpNewConnectionEvent) event);
+            onConnect(((TcpNewConnectionEvent) event).getConnection());
         else if (event instanceof TcpCloseConnectionEvent)
-            onClose((TcpCloseConnectionEvent) event);
+            onClose(((TcpCloseConnectionEvent) event).getConnection());
     }
 
-    private void onConnect(final TcpNewConnectionEvent event) {
-        final InetSocketAddress destination = event.getConnection().getLink().destination;
-        final int relayPort = event.getLocalRelayPort();
+    private void onConnect(final Connection connection) {
+        final InetSocketAddress destination = connection.getLink().destination;
+        final int relayPort = connection.getUpstreamChannel().socket().getLocalPort();
 
         // Redirect connections to port 443 (HTTPS)
         if (destination.getPort() == 443) {
             LOG.debug("Intercepted connection from TCP relay port ({}) to HTTPS standard port (443), rerouting " +
                     "destination to proxy ({} becomes {})", relayPort, destination, getProxyAddress());
             routes.addRoute(relayPort, destination, RouteTable.TYPE_HTTPS);
-            event.getConnection().putExtra(Connection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
+            connection.putExtra(Connection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
         }
     }
 
-    private void onClose(final TcpCloseConnectionEvent event) {
-        routes.removeRoute(event.getConnection().getUpstreamChannel().socket().getLocalPort());
+    private void onClose(final Connection connection) {
+        routes.removeRoute(connection.getUpstreamChannel().socket().getLocalPort());
     }
 
     private InetSocketAddress getProxyAddress() {

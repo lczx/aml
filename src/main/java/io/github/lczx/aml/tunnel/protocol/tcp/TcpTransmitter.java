@@ -136,8 +136,7 @@ class TcpTransmitter implements Runnable {
         connection.getTcb().localAckN++; // SYN counts as a byte
         sessionRegistry.putConnection(connection);
 
-        amlContext.getEventDispatcher().sendEvent(
-                new TcpNewConnectionEvent(connection, outChannel.socket().getLocalPort()));
+        amlContext.getEventDispatcher().sendEvent(new TcpNewConnectionEvent(connection));
         InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_DESTINATION_REDIRECT);
         if (dstSock == null) dstSock = registryKey.destination;
 

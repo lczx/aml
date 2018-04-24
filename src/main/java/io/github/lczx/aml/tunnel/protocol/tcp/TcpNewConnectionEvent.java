@@ -21,19 +21,13 @@ import io.github.lczx.aml.hook.AMLEvent;
 public class TcpNewConnectionEvent extends AMLEvent {
 
     private final Connection connection;
-    private final int localRelayPort;
 
-    /* package */ TcpNewConnectionEvent(final Connection connection, final int localRelayPort) {
+    /* package */ TcpNewConnectionEvent(final Connection connection) {
         this.connection = connection;
-        this.localRelayPort = localRelayPort;
     }
 
     public Connection getConnection() {
         return connection;
-    }
-
-    public int getLocalRelayPort() {
-        return localRelayPort;
     }
 
 }
