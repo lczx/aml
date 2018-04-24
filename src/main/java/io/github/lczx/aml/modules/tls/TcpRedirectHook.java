@@ -51,14 +51,14 @@ import java.net.InetSocketAddress;
 
     private void onConnect(final TcpNewConnectionEvent event) {
         final InetSocketAddress destination = event.getConnection().getLink().destination;
-        final int localPort = event.getLocalRelayPort();
+        final int relayPort = event.getLocalRelayPort();
 
         // Redirect connections to port 443 (HTTPS)
         if (destination.getPort() == 443) {
             LOG.debug("Intercepted connection from TCP relay port ({}) to HTTPS standard port (443), rerouting " +
-                    "destination to proxy ({} becomes {})", localPort, destination, getProxyAddress());
-            routes.addRoute(localPort, destination, RouteTable.TYPE_HTTPS);
-            event.getConnection().putExtra(Connection.EXTRA_ADDRESS_REDIRECT, getProxyAddress());
+                    "destination to proxy ({} becomes {})", relayPort, destination, getProxyAddress());
+            routes.addRoute(relayPort, destination, RouteTable.TYPE_HTTPS);
+            event.getConnection().putExtra(Connection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
         }
     }
 

@@ -138,7 +138,7 @@ class TcpTransmitter implements Runnable {
 
         amlContext.getEventDispatcher().sendEvent(
                 new TcpNewConnectionEvent(connection, outChannel.socket().getLocalPort()));
-        InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_ADDRESS_REDIRECT);
+        InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_DESTINATION_REDIRECT);
         if (dstSock == null) dstSock = registryKey.destination;
 
         try {

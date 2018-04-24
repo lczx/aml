@@ -28,9 +28,9 @@ import java.util.Map;
 
 public class Connection {
 
-    public static final String EXTRA_ADDRESS_REDIRECT = "redirect-address";
+    public static final String EXTRA_DESTINATION_REDIRECT = "redirect-destination";
 
-    private final Link registryKey;
+    private final Link link;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
     private final Map<String, Object> extra = new HashMap<>();
@@ -39,14 +39,14 @@ public class Connection {
     private SelectionKey selectionKey;
     private Packet packetAttachment;
 
-    public Connection(final Link registryKey, final TCB tcb, final SocketChannel upstreamChannel) {
-        this.registryKey = registryKey;
+    /* package */ Connection(final Link link, final TCB tcb, final SocketChannel upstreamChannel) {
+        this.link = link;
         this.tcb = tcb;
         this.upstreamChannel = upstreamChannel;
     }
 
     public Link getLink() {
-        return registryKey;
+        return link;
     }
 
     public TCB getTcb() {
