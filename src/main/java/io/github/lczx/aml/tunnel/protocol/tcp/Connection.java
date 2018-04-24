@@ -49,36 +49,8 @@ public class Connection {
         return link;
     }
 
-    public TCB getTcb() {
-        return tcb;
-    }
-
     public SocketChannel getUpstreamChannel() {
         return upstreamChannel;
-    }
-
-    public boolean isWaitingForNetworkData() {
-        return waitingForNetworkData;
-    }
-
-    public void setWaitingForNetworkData(final boolean waitingForNetworkData) {
-        this.waitingForNetworkData = waitingForNetworkData;
-    }
-
-    public SelectionKey getSelectionKey() {
-        return selectionKey;
-    }
-
-    public void setSelectionKey(final SelectionKey selectionKey) {
-        this.selectionKey = selectionKey;
-    }
-
-    public Packet getPacketAttachment() {
-        return packetAttachment;
-    }
-
-    public void setPacketAttachment(final Packet packetAttachment) {
-        this.packetAttachment = packetAttachment;
     }
 
     @SuppressWarnings("unchecked")
@@ -90,7 +62,35 @@ public class Connection {
         extra.put(key, value);
     }
 
-    void closeUpstreamChannel() { // Used only by session registry
+    /* package */ TCB getTcb() {
+        return tcb;
+    }
+
+    /* package */ boolean isWaitingForNetworkData() {
+        return waitingForNetworkData;
+    }
+
+    /* package */ void setWaitingForNetworkData(final boolean waitingForNetworkData) {
+        this.waitingForNetworkData = waitingForNetworkData;
+    }
+
+    /* package */ SelectionKey getSelectionKey() {
+        return selectionKey;
+    }
+
+    /* package */ void setSelectionKey(final SelectionKey selectionKey) {
+        this.selectionKey = selectionKey;
+    }
+
+    /* package */ Packet getPacketAttachment() {
+        return packetAttachment;
+    }
+
+    /* package */ void setPacketAttachment(final Packet packetAttachment) {
+        this.packetAttachment = packetAttachment;
+    }
+
+    /* package */ void closeUpstreamChannel() { // Used only by session registry
         IOUtils.safeClose(upstreamChannel);
     }
 
