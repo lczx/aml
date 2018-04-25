@@ -173,16 +173,18 @@ class TcpTransmitter implements Runnable {
 
     private void processDuplicateSYN(final Connection connection, final Packet packet) {
         synchronized (connection) {
+            // We received a SYN: We want to increment our ACK in any case
+            connection.getTcb().localAckN = packet.getLayer(TcpLayer.class).getSequenceNumber() + 1;
+
             if (connection.getTcb().state == TCB.State.SYN_SENT) {
                 // The client repeated SYN to ask again for a connection, but we haven't got a response yet,
                 // we already have the old packet as attachment w/ options, recycle the new one
-                connection.getTcb().localAckN = packet.getLayer(TcpLayer.class).getSequenceNumber() + 1;
                 // TODO: Recycle packet when implemented
                 return;
             }
 
             // ...otherwise the connection is in an invalid state and must be reset
-            sendRSTAndClose(connection, 1 /* SYN counts as a byte */, packet);
+            sendRSTAndClose(connection, packet);
         }
     }
 
@@ -277,30 +279,27 @@ class TcpTransmitter implements Runnable {
             }
 
             // Forward data to remote server
-            final long prevSeqN = tcp.getSequenceNumber();
-            final long prevAckN = tcp.getAcknowledgementNumber();
+            connection.getTcb().localAckN = tcp.getSequenceNumber() + payloadSize;
+            connection.getTcb().remoteAckN = tcp.getAcknowledgementNumber();
 
             try {
                 final ByteBuffer payload = tcp.getPayloadBufferView();
                 while (payload.hasRemaining()) connection.getUpstreamChannel().write(payload);
             } catch (final IOException e) {
                 LOG.error("Network write error: " + connection.getLink(), e);
-                sendRSTAndClose(connection, payloadSize, packet);
+                sendRSTAndClose(connection, packet);
                 return;
             }
 
             // TODO: We don't expect out-of-order packets, but verify
-            connection.getTcb().localAckN = prevSeqN + payloadSize;
-            connection.getTcb().remoteAckN = prevAckN;
             TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
                     connection.getTcb().localSeqN, connection.getTcb().localAckN);
         }
         packetSink.receive(packet);
     }
 
-    private void sendRSTAndClose(final Connection connection, final int prevPayloadSize, final Packet packet) {
-        TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_RST,
-                0, connection.getTcb().localAckN + prevPayloadSize);
+    private void sendRSTAndClose(final Connection connection, final Packet packet) {
+        TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_RST, 0, connection.getTcb().localAckN);
         packetSink.receive(packet);
         sessionRegistry.closeConnection(connection);
     }
