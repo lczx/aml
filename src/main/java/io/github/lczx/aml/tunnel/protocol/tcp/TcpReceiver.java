@@ -131,13 +131,13 @@ class TcpReceiver implements Runnable {
                 return;
             }
 
-            if (connection.getRxTransferQueue() == null)
-                connection.setRxTransferQueue(new DataTransferQueue(new RxDelayedReceiver(connection)));
+            if (!connection.getReceivingQUeue().isReceiverSet())
+                connection.getReceivingQUeue().setDataReceiver(new RxDelayedReceiver(connection));
 
             if (readBytes == -1) {
-                connection.getRxTransferQueue().putCommand(new EOSCommand(refPacket));
+                connection.getReceivingQUeue().putCommand(new EOSCommand(refPacket));
             } else {
-                connection.getRxTransferQueue().putData(payloadBuffer, refPacket, editor);
+                connection.getReceivingQUeue().putData(payloadBuffer, refPacket, editor);
             }
         }
     }

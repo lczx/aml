@@ -24,17 +24,16 @@ public class DataTransferQueue {
     private static final int INITIAL_CAPACITY = 4;
 
     private final Deque<TransferCommand> commandQueue = new ArrayDeque<>(INITIAL_CAPACITY);
-    private final DataReceiver dataReceiver;
     private final List<DataListener> dataListeners = new LinkedList<>();
+
+    private DataReceiver dataReceiver;
     private boolean doRetain = false;
     private boolean flushAutomatically = true;
 
-    public DataTransferQueue(final DataReceiver dataReceiver) {
-        Objects.requireNonNull(dataReceiver, "Data receiver must not be null");
-        this.dataReceiver = dataReceiver;
-    }
-
     public void putData(final ByteBuffer buffer, final Object... attachments) {
+        if (!isReceiverSet())
+            throw new IllegalStateException("Attempted command enqueuing without setting a data receiver first");
+
         if (!doRetain && flushAutomatically && commandQueue.isEmpty()) {
             // Optimization skipping the queue and the copying entirely if empty & no retaining is needed
             for (final DataListener dl : dataListeners) dl.onNewData(this, buffer);
@@ -49,6 +48,9 @@ public class DataTransferQueue {
     }
 
     public void putCommand(final TransferCommand command) {
+        if (!isReceiverSet())
+            throw new IllegalStateException("Attempted command enqueuing without setting a data receiver first");
+
         if (flushAutomatically && commandQueue.isEmpty()) {
             dataReceiver.onTransferCommand(command);
         } else {
@@ -64,6 +66,14 @@ public class DataTransferQueue {
             if (ret instanceof DataHolder) return ((DataHolder) ret).buffer;
         }
         return null;
+    }
+
+    public void setDataReceiver(final DataReceiver dataReceiver) {
+        this.dataReceiver = dataReceiver;
+    }
+
+    public boolean isReceiverSet() {
+        return dataReceiver != null;
     }
 
     public void addDataListener(final DataListener dataListener, final boolean doesRetain) {

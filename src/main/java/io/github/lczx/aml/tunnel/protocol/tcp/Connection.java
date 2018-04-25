@@ -34,10 +34,10 @@ public class Connection {
     private final Link link;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
+    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
+    private final DataTransferQueue receivingQUeue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
-    private DataTransferQueue txTransferQueue;
-    private DataTransferQueue rxTransferQueue;
     private boolean waitingForNetworkData;
     private SelectionKey selectionKey;
     private Packet packetAttachment;
@@ -56,20 +56,12 @@ public class Connection {
         return upstreamChannel;
     }
 
-    public DataTransferQueue getTxTransferQueue() {
-        return txTransferQueue;
+    public DataTransferQueue getTransmittingQueue() {
+        return transmittingQueue;
     }
 
-    /* package */ void setTxTransferQueue(final DataTransferQueue txTransferQueue) {
-        this.txTransferQueue = txTransferQueue;
-    }
-
-    public DataTransferQueue getRxTransferQueue() {
-        return rxTransferQueue;
-    }
-
-    /* package */ void setRxTransferQueue(final DataTransferQueue rxTransferQueue) {
-        this.rxTransferQueue = rxTransferQueue;
+    public DataTransferQueue getReceivingQUeue() {
+        return receivingQUeue;
     }
 
     @SuppressWarnings("unchecked")

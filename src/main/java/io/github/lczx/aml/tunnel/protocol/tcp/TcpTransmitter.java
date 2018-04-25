@@ -135,7 +135,7 @@ class TcpTransmitter implements Runnable {
         final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);
         connection.getTcb().localAckN++; // SYN counts as a byte
-        connection.setTxTransferQueue(new DataTransferQueue(new TxDelayedReceiver(connection)));
+        connection.getTransmittingQueue().setDataReceiver(new TxDelayedReceiver(connection));
         sessionRegistry.putConnection(connection);
 
         InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_DESTINATION_REDIRECT);
@@ -195,7 +195,7 @@ class TcpTransmitter implements Runnable {
             final TcpLayer tcp = packet.getLayer(TcpLayer.class);
             connection.getTcb().localAckN = tcp.getSequenceNumber() + 1;
             connection.getTcb().remoteAckN = tcp.getAcknowledgementNumber();
-            connection.getTxTransferQueue().putCommand(new ShutdownOutputCommand());
+            connection.getTransmittingQueue().putCommand(new ShutdownOutputCommand());
 
             /* // TODO: Begin experimental passive close code (is it necessary?)
             if (connection.getTcb().state == TCB.State.FIN_WAIT_2) {
@@ -285,7 +285,7 @@ class TcpTransmitter implements Runnable {
             connection.getTcb().remoteAckN = tcp.getAcknowledgementNumber();
 
             // Note: The transfer queue will copy the buffer if necessary, we don't need to worry about packet recycling
-            connection.getTxTransferQueue().putData(tcp.getPayloadBufferView());
+            connection.getTransmittingQueue().putData(tcp.getPayloadBufferView());
 
             // TODO: We don't expect out-of-order packets, but verify
             TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
@@ -302,7 +302,7 @@ class TcpTransmitter implements Runnable {
 
     private void closeCleanly(final Connection connection, final Packet packet) {
         // TODO: Recycle packet & buffer when implemented
-        connection.getTxTransferQueue().putCommand(new CloseCommand());
+        connection.getTransmittingQueue().putCommand(new CloseCommand());
     }
 
     static void processChannelConnected(final Connection connection, final Packet packet) {
