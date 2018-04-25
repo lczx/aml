@@ -68,8 +68,10 @@ import java.security.SecureRandom;
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
-            final PayloadPipe txPipe = new PayloadPipe(downstreamTunnel, upstreamTunnel);
-            final PayloadPipe rxPipe = new PayloadPipe(upstreamTunnel, downstreamTunnel);
+            final PayloadPipe txPipe =
+                    new PayloadPipe(downstreamTunnel, upstreamTunnel, proxyConnection.getTransmittingQueue());
+            final PayloadPipe rxPipe =
+                    new PayloadPipe(upstreamTunnel, downstreamTunnel, proxyConnection.getReceivingQUeue());
 
             new Thread(rxPipe, Thread.currentThread().getName() + "-rx").start();
             Thread.currentThread().setName(Thread.currentThread().getName() + "-tx");

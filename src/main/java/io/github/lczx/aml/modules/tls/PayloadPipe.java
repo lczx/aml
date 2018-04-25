@@ -17,6 +17,7 @@
 package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.tunnel.IOUtils;
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.tls.TlsNoCloseNotifyException;
@@ -35,18 +36,22 @@ import java.nio.channels.WritableByteChannel;
 
     private final ReadableByteChannel input;
     private final WritableByteChannel output;
+    private final DataTransferQueue transferQueue;
+    private final ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
     private Thread pipeThread;
 
-    /* package */ PayloadPipe(final TlsProtocol inProto, final TlsProtocol outProto) {
+    /* package */ PayloadPipe(final TlsProtocol inProto, final TlsProtocol outProto,
+                              final DataTransferQueue transferQueue) {
         this.input = Channels.newChannel(inProto.getInputStream());
         this.output = Channels.newChannel(outProto.getOutputStream());
+        this.transferQueue = transferQueue;
+        transferQueue.setDataReceiver(new DelayedWriter());
     }
 
     @Override
     public void run() {
         pipeThread = Thread.currentThread();
         try {
-            final ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
             while (!Thread.interrupted()) {
                 int count;
                 try {
@@ -61,16 +66,10 @@ import java.nio.channels.WritableByteChannel;
                 }
 
                 if (count != -1) {
-                    final int written = output.write(buffer);
-                    buffer.clear();
-                    LOG.trace("{} wrote {} bytes", this, written);
+                    transferQueue.putData(buffer);
                 } else {
                     LOG.debug("{} reached EOS, closing output and quitting", this);
-
-                    // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
-                    // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
-                    // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
-                    output.close();
+                    transferQueue.putCommand(new EOSCommand());
                     break;
                 }
             }
@@ -84,5 +83,42 @@ import java.nio.channels.WritableByteChannel;
     public String toString() {
         return "PayloadPipe{" + pipeThread.getName() + '}';
     }
+
+    private class DelayedWriter implements DataTransferQueue.DataReceiver {
+        @Override
+        public void onDataReady(final ByteBuffer buffer, final Object... attachments) {
+            try {
+                final int count = output.write(buffer);
+                buffer.clear(); // <-- We don't care if this is our buffer or a copy
+                LOG.trace("{} wrote {} bytes", this, count);
+            } catch (final IOException e) {
+                LOG.error(this.toString() + " errored while transferring data", e);
+                IOUtils.safeClose(input, output);
+            }
+        }
+
+        @Override
+        public void onBufferRetained(final ByteBuffer buffer, final Object... attachments) {
+            // Data was retained/copied, clear the buffer for reuse
+            PayloadPipe.this.buffer.clear(); // same as "buffer.clear();"
+        }
+
+        @Override
+        public void onTransferCommand(final DataTransferQueue.TransferCommand command) {
+            if (!(command instanceof EOSCommand)) return;
+
+            // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
+            // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
+            // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
+            try {
+                output.close();
+            } catch (final IOException e) {
+                LOG.error(this.toString() + " errored while transferring data", e);
+                IOUtils.safeClose(input, output);
+            }
+        }
+    }
+
+    private static class EOSCommand implements DataTransferQueue.TransferCommand { }
 
 }

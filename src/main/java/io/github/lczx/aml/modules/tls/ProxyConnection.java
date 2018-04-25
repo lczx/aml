@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
 
 import java.util.HashMap;
@@ -25,7 +26,8 @@ public class ProxyConnection {
 
     private final Connection tcpConnection;
     private final Type proxyType;
-
+    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
+    private final DataTransferQueue receivingQUeue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
     public ProxyConnection(final Connection tcpConnection, final Type proxyType) {
@@ -39,6 +41,14 @@ public class ProxyConnection {
 
     public Type getProxyType() {
         return proxyType;
+    }
+
+    public DataTransferQueue getTransmittingQueue() {
+        return transmittingQueue;
+    }
+
+    public DataTransferQueue getReceivingQUeue() {
+        return receivingQUeue;
     }
 
     @SuppressWarnings("unchecked")
