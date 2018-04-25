@@ -25,31 +25,33 @@ import io.github.lczx.aml.modules.tls.proxy.ServerParameters;
 import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.tls.*;
+import org.spongycastle.crypto.tls.TlsClientProtocol;
+import org.spongycastle.crypto.tls.TlsServer;
+import org.spongycastle.crypto.tls.TlsServerProtocol;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.security.SecureRandom;
 
-class HttpsProxyConnectionHandler implements Runnable {
+/* package */ class HttpsProxyConnectionHandler implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpsProxyConnectionHandler.class);
 
-    private final InetSocketAddress destinationSockAddress;
+    private final ProxyConnection proxyConnection;
     private final ProxyCertificateProvider certificateProvider;
     private final SocketProtector socketProtector;
     private final Socket downstreamSocket;
-    private Socket upstreamSocket;
+
     private TlsServerProtocol downstreamTunnel;
     private TlsClientProtocol upstreamTunnel;
 
-    HttpsProxyConnectionHandler(final InetSocketAddress destinationSockAddress, final Socket acceptedSocket,
-                                final ProxyCertificateProvider certProvider, final SocketProtector socketProtector) {
-        this.destinationSockAddress = destinationSockAddress;
+    /* package */ HttpsProxyConnectionHandler(final ProxyConnection proxyConnection, final Socket acceptedSocket,
+                                              final ProxyCertificateProvider certProvider,
+                                              final SocketProtector socketProtector) {
+        this.proxyConnection = proxyConnection;
         this.downstreamSocket = acceptedSocket;
         this.certificateProvider = certProvider;
         this.socketProtector = socketProtector;
@@ -74,17 +76,19 @@ class HttpsProxyConnectionHandler implements Runnable {
             txPipe.run();
 
         } catch (final IOException e) {
-            LOG.error("I/O exception while establishing a tunnel from " +
-                    downstreamSocket.getRemoteSocketAddress() + " to " + destinationSockAddress, e);
+            LOG.error("I/O exception while establishing a tunnel from " + downstreamSocket.getRemoteSocketAddress() +
+                    " to " + proxyConnection.getTcpConnection().getLink().destination, e);
             // TODO: Close socket (should close TCB as well)
         }
     }
 
     private void onClientHelloReceived(final TlsServer tlsServer,
                                        final ClientParameters clientParameters) throws IOException {
+        final InetSocketAddress destinationSockAddress = proxyConnection.getTcpConnection().getLink().destination;
+
         LOG.debug("Received TLS Client Hello (server: {}, params: {}), connecting upstream to {}",
                 downstreamTunnel, clientParameters, destinationSockAddress);
-        upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
+        final Socket upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
         socketProtector.protect(upstreamSocket);
 
         final ProxyTlsClient tlsClient = new ProxyTlsClient(clientParameters);
@@ -94,7 +98,7 @@ class HttpsProxyConnectionHandler implements Runnable {
 
         final ServerParameters serverParams = tlsClient.makeServerParameters();
         LOG.debug("Upstream connection established emulating downstream client parameters, " +
-                "using upstream Server Hello response to answer downstream (dSrv: {}, uSrv: {}, params: {}",
+                        "using upstream Server Hello response to answer downstream (dSrv: {}, uSrv: {}, params: {}",
                 downstreamTunnel, upstreamTunnel, serverParams);
         ((ProxyTlsServer) tlsServer).setParams(serverParams);
     }

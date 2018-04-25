@@ -57,7 +57,7 @@ import java.net.InetSocketAddress;
         if (destination.getPort() == 443) {
             LOG.debug("Intercepted connection from TCP relay port ({}) to HTTPS standard port (443), rerouting " +
                     "destination to proxy ({} becomes {})", relayPort, destination, getProxyAddress());
-            routes.addRoute(relayPort, destination, RouteTable.TYPE_HTTPS);
+            routes.addRoute(relayPort, new ProxyConnection(connection, ProxyConnection.Type.HTTPS));
             connection.putExtra(Connection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
         }
     }
