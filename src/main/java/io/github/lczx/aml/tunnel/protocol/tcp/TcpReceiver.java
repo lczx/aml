@@ -21,10 +21,12 @@ import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -114,8 +116,10 @@ class TcpReceiver implements Runnable {
 
             final PayloadEditor editor = refPacket.getLayer(TcpLayer.class).payloadEditor();
             final int readBytes;
+            final ByteBuffer payloadBuffer = editor.buffer(true);
             try {
-                readBytes = connection.getUpstreamChannel().read(editor.buffer(true));
+                readBytes = connection.getUpstreamChannel().read(payloadBuffer);
+                payloadBuffer.flip();
             } catch (final IOException e) {
                 LOG.error("Network read error: " + connection.getLink(), e);
                 editor.clearContent();
@@ -127,12 +131,63 @@ class TcpReceiver implements Runnable {
                 return;
             }
 
-            if (readBytes == -1) {
-                // End of stream, stop waiting until we push more data
-                connection.getSelectionKey().interestOps(0);
-                connection.setWaitingForNetworkData(false);
+            if (connection.getRxTransferQueue() == null)
+                connection.setRxTransferQueue(new DataTransferQueue(new RxDelayedReceiver(connection)));
 
-                if (connection.getTcb().state != TCB.State.CLOSE_WAIT) {
+            if (readBytes == -1) {
+                connection.getRxTransferQueue().putCommand(new EOSCommand(refPacket));
+            } else {
+                connection.getRxTransferQueue().putData(payloadBuffer, refPacket, editor);
+            }
+        }
+    }
+
+    private class RxDelayedReceiver implements DataTransferQueue.DataReceiver {
+        private final Connection connection;
+
+        private RxDelayedReceiver(final Connection connection) {
+            this.connection = connection;
+        }
+
+        @Override
+        public void onDataReady(final ByteBuffer buffer, final Object... attachments) {
+            final Packet refPacket;
+            final int bufferSize = buffer.remaining();
+            if (attachments != null) {
+                // The buffer was not retained/copied and is part of a pending edit, committing now
+                refPacket = (Packet) attachments[0];
+                ((PayloadEditor) attachments[1]).commit();
+            } else {
+                // The buffer is a copy or generated, we need to create a new packet and copy data into it
+                refPacket = Packets.makeCopy(connection.getPacketAttachment());
+                final PayloadEditor editor = refPacket.getLayer(TcpLayer.class).payloadEditor();
+                editor.buffer(true).put(buffer);
+                editor.flipAndCommit();
+            }
+
+            // TODO: We should ideally be splitting segments by MTU/MSS, but this seems to work without
+            TcpUtil.recyclePacketForResponse(refPacket, TcpLayer.FLAG_PSH | TcpLayer.FLAG_ACK,
+                    connection.getTcb().localSeqN, connection.getTcb().localAckN, true, false);
+            connection.getTcb().localSeqN += bufferSize; // Next sequence number
+            packetSink.receive(refPacket);
+        }
+
+        @Override
+        public void onBufferRetained(final ByteBuffer buffer, final Object... attachments) {
+            // The buffer was retained (and copied), recycle the unused packet
+            final Packet packet = (Packet) attachments[0];
+            // TODO: Release packet when implemented
+        }
+
+        @Override
+        public void onTransferCommand(final DataTransferQueue.TransferCommand command) {
+            final Packet refPacket = ((EOSCommand) command).refPacket;
+
+            // End of stream, stop waiting until we push more data
+            connection.getSelectionKey().interestOps(0);
+            connection.setWaitingForNetworkData(false);
+
+            if (connection.getTcb().state != TCB.State.CLOSE_WAIT) {
                     /* // TODO: Begin experimental passive close code (is it necessary?)
                     connection.getTcb().state = TCB.State.FIN_WAIT_1;
                     TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_FIN,
@@ -140,23 +195,24 @@ class TcpReceiver implements Runnable {
                     connection.getTcb().localSeqN++; // FIN counts as a byte
                     packetSink.receive(refPacket);
                     } // TODO: End experimental passive close code */
-                    // TODO: Release packet when implemented
-                    return;
-                }
-
-                connection.getTcb().state = TCB.State.LAST_ACK;
-                // Using FIN,ACK instead of FIN makes the client answer us with ACK and close in TX#processACK()
-                TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_FIN | TcpLayer.FLAG_ACK,
-                        connection.getTcb().localSeqN, connection.getTcb().localAckN);
-                connection.getTcb().localSeqN++; // FIN counts as a byte
-            } else {
-                // TODO: We should ideally be splitting segments by MTU/MSS, but this seems to work without
-                editor.flipAndCommit();
-                TcpUtil.recyclePacketForResponse(refPacket, TcpLayer.FLAG_PSH | TcpLayer.FLAG_ACK,
-                        connection.getTcb().localSeqN, connection.getTcb().localAckN, true, false);
-                connection.getTcb().localSeqN += readBytes; // Next sequence number
+                // TODO: Release packet when implemented
+                return;
             }
+
+            connection.getTcb().state = TCB.State.LAST_ACK;
+            // Using FIN,ACK instead of FIN makes the client answer us with ACK and close in TX#processACK()
+            TcpUtil.recyclePacketForEmptyResponse(refPacket, TcpLayer.FLAG_FIN | TcpLayer.FLAG_ACK,
+                    connection.getTcb().localSeqN, connection.getTcb().localAckN);
+            connection.getTcb().localSeqN++; // FIN counts as a byte
             packetSink.receive(refPacket);
+        }
+    }
+
+    private static class EOSCommand implements DataTransferQueue.TransferCommand {
+        private final Packet refPacket;
+
+        private EOSCommand(final Packet refPacket) {
+            this.refPacket = refPacket;
         }
     }
 

@@ -23,6 +23,7 @@ import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import io.github.lczx.aml.tunnel.protocol.Link;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,6 +135,7 @@ class TcpTransmitter implements Runnable {
         final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);
         connection.getTcb().localAckN++; // SYN counts as a byte
+        connection.setTxTransferQueue(new DataTransferQueue(new TxDelayedReceiver(connection)));
         sessionRegistry.putConnection(connection);
 
         InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_DESTINATION_REDIRECT);
@@ -188,12 +190,12 @@ class TcpTransmitter implements Runnable {
         }
     }
 
-    private void processFIN(final Connection connection, final Packet packet) throws IOException {
+    private void processFIN(final Connection connection, final Packet packet) {
         synchronized (connection) {
             final TcpLayer tcp = packet.getLayer(TcpLayer.class);
             connection.getTcb().localAckN = tcp.getSequenceNumber() + 1;
             connection.getTcb().remoteAckN = tcp.getAcknowledgementNumber();
-            connection.getUpstreamChannel().socket().shutdownOutput(); // TODO: Check if this works
+            connection.getTxTransferQueue().putCommand(new ShutdownOutputCommand());
 
             /* // TODO: Begin experimental passive close code (is it necessary?)
             if (connection.getTcb().state == TCB.State.FIN_WAIT_2) {
@@ -278,18 +280,12 @@ class TcpTransmitter implements Runnable {
                 connection.setWaitingForNetworkData(true);
             }
 
-            // Forward data to remote server
+            // Put data in our transfer queue and answer with ACK
             connection.getTcb().localAckN = tcp.getSequenceNumber() + payloadSize;
             connection.getTcb().remoteAckN = tcp.getAcknowledgementNumber();
 
-            try {
-                final ByteBuffer payload = tcp.getPayloadBufferView();
-                while (payload.hasRemaining()) connection.getUpstreamChannel().write(payload);
-            } catch (final IOException e) {
-                LOG.error("Network write error: " + connection.getLink(), e);
-                sendRSTAndClose(connection, packet);
-                return;
-            }
+            // Note: The transfer queue will copy the buffer if necessary, we don't need to worry about packet recycling
+            connection.getTxTransferQueue().putData(tcp.getPayloadBufferView());
 
             // TODO: We don't expect out-of-order packets, but verify
             TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_ACK,
@@ -306,7 +302,7 @@ class TcpTransmitter implements Runnable {
 
     private void closeCleanly(final Connection connection, final Packet packet) {
         // TODO: Recycle packet & buffer when implemented
-        sessionRegistry.closeConnection(connection);
+        connection.getTxTransferQueue().putCommand(new CloseCommand());
     }
 
     static void processChannelConnected(final Connection connection, final Packet packet) {
@@ -317,5 +313,49 @@ class TcpTransmitter implements Runnable {
                 connection.getTcb().localSeqN, connection.getTcb().localAckN, true);
         connection.getTcb().localSeqN++; // SYN counts as a byte
     }
+
+    private class TxDelayedReceiver implements DataTransferQueue.DataReceiver {
+        private final Connection connection;
+
+        private TxDelayedReceiver(final Connection connection) {
+            this.connection = connection;
+        }
+
+        @Override
+        public void onDataReady(final ByteBuffer payload, final Object... attachments) {
+            try {
+                while (payload.hasRemaining()) connection.getUpstreamChannel().write(payload);
+            } catch (final IOException e) {
+                LOG.error("Network write error: " + connection.getLink(), e);
+                // TODO: Copy may be useless since this is the last packet sent
+                sendRSTAndClose(connection, Packets.makeCopy(connection.getPacketAttachment()));
+            }
+        }
+
+        @Override
+        public void onBufferRetained(final ByteBuffer buffer, final Object... attachments) {
+            // Do nothing since we do not have any packet lifecycle to manage here
+        }
+
+        @Override
+        public void onTransferCommand(final DataTransferQueue.TransferCommand command) {
+            if (command instanceof CloseCommand) {
+                sessionRegistry.closeConnection(connection);
+            } else if (command instanceof ShutdownOutputCommand) {
+                try {
+                    connection.getUpstreamChannel().socket().shutdownOutput(); // TODO: Check if this works
+                } catch (IOException e) {
+                    LOG.error("Connection error: " + connection.getLink().destination, e);
+                    // TODO: Copy may be useless since this is the last packet sent
+                    sendRSTAndClose(connection, Packets.makeCopy(connection.getPacketAttachment()));
+                }
+            }
+        }
+
+    }
+
+    private static class ShutdownOutputCommand implements DataTransferQueue.TransferCommand { }
+
+    private static class CloseCommand implements DataTransferQueue.TransferCommand { }
 
 }
