@@ -27,7 +27,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 
-class ProxyServerLoop implements Runnable {
+/* package */ class ProxyServerLoop implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyServerLoop.class);
 
@@ -37,7 +37,7 @@ class ProxyServerLoop implements Runnable {
 
     private ServerSocket serverSocket;
 
-    ProxyServerLoop(final RouteTable routes, final ProxyCertificateProvider certProvider,
+    /* package */ ProxyServerLoop(final RouteTable routes, final ProxyCertificateProvider certProvider,
                     final SocketProtector socketProtector) {
         this.routeTable = routes;
         this.certProvider = certProvider;
@@ -70,7 +70,7 @@ class ProxyServerLoop implements Runnable {
         }
     }
 
-    public int getLocalPort() {
+    /* package */ int getLocalPort() {
         return serverSocket.getLocalPort();
     }
 
@@ -79,20 +79,19 @@ class ProxyServerLoop implements Runnable {
     }
 
     private void handleNewConnection(final Socket socket) {
-        final RouteTable.RouteInfo route = routeTable.getRoute(socket.getPort());
+        final ProxyConnection route = routeTable.getRoute(socket.getPort());
         if (route == null) {
             LOG.warn("Unknown source port ({}), cannot determine proxy params: closing connection", socket.getPort());
             IOUtils.safeClose(socket);
             return;
         }
 
-        Thread connThread;
-        switch (route.proxyType) {
-            case RouteTable.TYPE_HTTPS:
+        final Thread connThread;
+        switch (route.getProxyType()) {
+            case HTTPS:
                 LOG.debug("New connection from port {}, original destination {}, type HTTPS",
-                        socket.getPort(), route.destinationSockAddress);
-                connThread = new Thread(new HttpsProxyConnectionHandler(
-                        route.destinationSockAddress, socket, certProvider, socketProtector),
+                        socket.getPort(), route.getTcpConnection().getLink().destination);
+                connThread = new Thread(new HttpsProxyConnectionHandler(route, socket, certProvider, socketProtector),
                         "pxy_conn" + socket.getPort());
                 break;
 

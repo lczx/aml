@@ -16,36 +16,49 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.tunnel.IOUtils;
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.tls.TlsNoCloseNotifyException;
-import org.spongycastle.crypto.tls.TlsProtocol;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /* package */ class PayloadPipe implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayloadPipe.class);
 
-    private final TlsProtocol inProto, outProto;
+    private final ReadableByteChannel input;
+    private final WritableByteChannel output;
+    private final DataTransferQueue transferQueue;
+    private final ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
     private Thread pipeThread;
 
-    /* package */ PayloadPipe(final TlsProtocol inProto, final TlsProtocol outProto) {
-        this.inProto = inProto;
-        this.outProto = outProto;
+    /* package */ PayloadPipe(final InputStream inputStream, final OutputStream outputStream,
+                              final DataTransferQueue transferQueue) {
+        this.input = Channels.newChannel(inputStream);
+        this.output = Channels.newChannel(outputStream);
+        this.transferQueue = transferQueue;
+        transferQueue.setDataReceiver(new DelayedWriter());
     }
 
     @Override
     public void run() {
         pipeThread = Thread.currentThread();
         try {
-            final byte[] buf = new byte[8192];
             while (!Thread.interrupted()) {
                 int count;
                 try {
-                    count = inProto.getInputStream().read(buf);
-                } catch (final TlsNoCloseNotifyException e) {
+                    count = input.read(buffer);
+                    buffer.flip();
+                } catch (final EOFException e) {
                     LOG.debug("{} got into an EOS-like situation: {}", this, e.getMessage());
                     count = -1;
                 } catch (final SocketException e) {
@@ -54,21 +67,16 @@ import java.net.SocketException;
                 }
 
                 if (count != -1) {
-                    outProto.getOutputStream().write(buf, 0, count);
-                    LOG.trace("{} wrote {} bytes", this, count);
+                    transferQueue.putData(buffer);
                 } else {
                     LOG.debug("{} reached EOS, closing output and quitting", this);
-
-                    // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
-                    // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
-                    // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
-                    outProto.close();
+                    transferQueue.putCommand(new EOSCommand());
                     break;
                 }
             }
         } catch (final IOException e) {
             LOG.error(this.toString() + " errored while transferring data", e);
-            TlsIOUtils.safeClose(inProto, outProto);
+            IOUtils.safeClose(input, output);
         }
     }
 
@@ -76,5 +84,42 @@ import java.net.SocketException;
     public String toString() {
         return "PayloadPipe{" + pipeThread.getName() + '}';
     }
+
+    private class DelayedWriter implements DataTransferQueue.DataReceiver {
+        @Override
+        public void onDataReady(final ByteBuffer buffer, final Object... attachments) {
+            try {
+                final int count = output.write(buffer);
+                buffer.clear(); // <-- We don't care if this is our buffer or a copy
+                LOG.trace("{} wrote {} bytes", this, count);
+            } catch (final IOException e) {
+                LOG.error(this.toString() + " errored while transferring data", e);
+                IOUtils.safeClose(input, output);
+            }
+        }
+
+        @Override
+        public void onBufferRetained(final ByteBuffer buffer, final Object... attachments) {
+            // Data was retained/copied, clear the buffer for reuse
+            PayloadPipe.this.buffer.clear(); // same as "buffer.clear();"
+        }
+
+        @Override
+        public void onTransferCommand(final DataTransferQueue.TransferCommand command) {
+            if (!(command instanceof EOSCommand)) return;
+
+            // Do not use shutdownOutput() / isOutputShutdown() on the socket (it prevents transmission of
+            // close_notify); TLS does not support half-close to avoid truncation attacks. Closing output
+            // sends close_notify to the remote peer. See: https://tools.ietf.org/html/rfc2246#section-7.2.1
+            try {
+                output.close();
+            } catch (final IOException e) {
+                LOG.error(this.toString() + " errored while transferring data", e);
+                IOUtils.safeClose(input, output);
+            }
+        }
+    }
+
+    private static class EOSCommand implements DataTransferQueue.TransferCommand { }
 
 }

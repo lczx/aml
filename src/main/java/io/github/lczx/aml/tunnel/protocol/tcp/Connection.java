@@ -18,6 +18,7 @@ package io.github.lczx.aml.tunnel.protocol.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.packet.Packet;
+import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import io.github.lczx.aml.tunnel.protocol.Link;
 
 import java.net.SocketAddress;
@@ -33,6 +34,8 @@ public class Connection {
     private final Link link;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
+    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
+    private final DataTransferQueue receivingQueue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
     private boolean waitingForNetworkData;
@@ -51,6 +54,14 @@ public class Connection {
 
     public SocketChannel getUpstreamChannel() {
         return upstreamChannel;
+    }
+
+    public DataTransferQueue getTransmittingQueue() {
+        return transmittingQueue;
+    }
+
+    public DataTransferQueue getReceivingQueue() {
+        return receivingQueue;
     }
 
     @SuppressWarnings("unchecked")
