@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
 class TcpReceiver implements Runnable {
@@ -60,11 +59,15 @@ class TcpReceiver implements Runnable {
 
                 while (keyIterator.hasNext() && !Thread.interrupted()) {
                     final SelectionKey key = keyIterator.next();
+                    final Connection connection = (Connection) key.attachment();
                     if (key.isValid()) {
-                        if (key.isConnectable())
-                            processConnect(key, keyIterator);
-                        else if (key.isReadable())
-                            processInput(key, keyIterator);
+                        if (key.isConnectable()) {
+                            keyIterator.remove();
+                            processConnect(connection);
+                        } else if (key.isReadable()) {
+                            keyIterator.remove();
+                            processInput(connection);
+                        }
                     }
                 }
             }
@@ -75,16 +78,13 @@ class TcpReceiver implements Runnable {
         }
     }
 
-    private void processConnect(final SelectionKey key, final Iterator<SelectionKey> keyIterator) {
-        final Connection connection = (Connection) key.attachment();
-
+    private void processConnect(final Connection connection) {
         // This is the packet attached in TcpTransmitter#initializeConnection() [with TCP SYN options] (not a copy)
         final Packet packet = connection.getPacketAttachment();
 
         try {
             if (!connection.getUpstreamChannel().finishConnect())
                 throw new IOException("finishConnect() returned false when channel was connectable");
-            keyIterator.remove();
 
             // Make a copy of the packet without options as a template for further I/O
             final Packet templatePacket = Packets.makeCopy(packet);
@@ -94,7 +94,7 @@ class TcpReceiver implements Runnable {
             // The channel is now connected, answer local with SYN,ACK
             TcpTransmitter.processChannelConnected(connection, packet);
 
-            key.interestOps(SelectionKey.OP_READ); // todo mmh
+            connection.getSelectionKey().interestOps(SelectionKey.OP_READ); // todo mmh
 
         } catch (final IOException e) {
             // Got an error, reset the connection, use packet attachment, strip options
@@ -107,17 +107,15 @@ class TcpReceiver implements Runnable {
         packetSink.receive(packet);
     }
 
-    private void processInput(final SelectionKey key, final Iterator<SelectionKey> keyIterator) {
-        keyIterator.remove();
-        final Connection connection = (Connection) key.attachment();
+    private void processInput(final Connection connection) {
         synchronized (connection) {
-            final Packet refPacket = Packets.makeCopy(connection.getPacketAttachment()); // This is the attached copy without options
-            final SocketChannel inputChannel = (SocketChannel) key.channel();
+            // This is the attached copy without options
+            final Packet refPacket = Packets.makeCopy(connection.getPacketAttachment());
 
             final PayloadEditor editor = refPacket.getLayer(TcpLayer.class).payloadEditor();
             final int readBytes;
             try {
-                readBytes = inputChannel.read(editor.buffer(true));
+                readBytes = connection.getUpstreamChannel().read(editor.buffer(true));
             } catch (final IOException e) {
                 LOG.error("Network read error: " + connection.getLink(), e);
                 editor.clearContent();
@@ -131,7 +129,7 @@ class TcpReceiver implements Runnable {
 
             if (readBytes == -1) {
                 // End of stream, stop waiting until we push more data
-                key.interestOps(0);
+                connection.getSelectionKey().interestOps(0);
                 connection.setWaitingForNetworkData(false);
 
                 if (connection.getTcb().state != TCB.State.CLOSE_WAIT) {
