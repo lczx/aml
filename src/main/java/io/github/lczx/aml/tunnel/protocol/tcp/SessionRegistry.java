@@ -90,12 +90,14 @@ public class SessionRegistry {
         @Override
         public void onMeasure(final MeasureHolder m) {
             // Note: this runs on the main thread
-            final ArrayList<String> l = new ArrayList<>(connCache.size());
-            for (final Map.Entry<Link, Connection> i : connCache.entrySet())
-                l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
+            synchronized (connCache) {
+                final ArrayList<String> l = new ArrayList<>(connCache.size());
+                for (final Map.Entry<Link, Connection> i : connCache.entrySet())
+                    l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
 
-            m.putStringArray(BaseMeasureKeys.TCP_CONN_CACHE_DUMP, l.toArray(new String[0]));
-            m.putInt(BaseMeasureKeys.TCP_CONN_CACHE_CAPACITY, connCache.getMaxSize());
+                m.putStringArray(BaseMeasureKeys.TCP_CONN_CACHE_DUMP, l.toArray(new String[0]));
+                m.putInt(BaseMeasureKeys.TCP_CONN_CACHE_CAPACITY, connCache.getMaxSize());
+            }
         }
     }
 
