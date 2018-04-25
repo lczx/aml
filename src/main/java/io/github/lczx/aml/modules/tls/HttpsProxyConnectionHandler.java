@@ -71,7 +71,7 @@ import java.security.SecureRandom;
             final PayloadPipe txPipe =
                     new PayloadPipe(downstreamTunnel, upstreamTunnel, proxyConnection.getTransmittingQueue());
             final PayloadPipe rxPipe =
-                    new PayloadPipe(upstreamTunnel, downstreamTunnel, proxyConnection.getReceivingQUeue());
+                    new PayloadPipe(upstreamTunnel, downstreamTunnel, proxyConnection.getReceivingQueue());
 
             new Thread(rxPipe, Thread.currentThread().getName() + "-rx").start();
             Thread.currentThread().setName(Thread.currentThread().getName() + "-tx");
@@ -106,7 +106,6 @@ import java.security.SecureRandom;
     }
 
     private class ProxyServerProtocol extends TlsServerProtocol {
-
         private ProxyServerProtocol(final InputStream input, final OutputStream output,
                                     final SecureRandom secureRandom) {
             super(input, output, secureRandom);
@@ -118,7 +117,6 @@ import java.security.SecureRandom;
                     getContext().getClientVersion(), offeredCipherSuites, offeredCompressionMethods, clientExtensions));
             super.sendServerHelloMessage();
         }
-
     }
 
 }

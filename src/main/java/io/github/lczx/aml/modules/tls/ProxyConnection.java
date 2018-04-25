@@ -27,7 +27,7 @@ public class ProxyConnection {
     private final Connection tcpConnection;
     private final Type proxyType;
     private final DataTransferQueue transmittingQueue = new DataTransferQueue();
-    private final DataTransferQueue receivingQUeue = new DataTransferQueue();
+    private final DataTransferQueue receivingQueue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
     public ProxyConnection(final Connection tcpConnection, final Type proxyType) {
@@ -47,8 +47,8 @@ public class ProxyConnection {
         return transmittingQueue;
     }
 
-    public DataTransferQueue getReceivingQUeue() {
-        return receivingQUeue;
+    public DataTransferQueue getReceivingQueue() {
+        return receivingQueue;
     }
 
     @SuppressWarnings("unchecked")

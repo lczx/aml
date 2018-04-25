@@ -35,7 +35,7 @@ public class Connection {
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
     private final DataTransferQueue transmittingQueue = new DataTransferQueue();
-    private final DataTransferQueue receivingQUeue = new DataTransferQueue();
+    private final DataTransferQueue receivingQueue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
     private boolean waitingForNetworkData;
@@ -60,8 +60,8 @@ public class Connection {
         return transmittingQueue;
     }
 
-    public DataTransferQueue getReceivingQUeue() {
-        return receivingQUeue;
+    public DataTransferQueue getReceivingQueue() {
+        return receivingQueue;
     }
 
     @SuppressWarnings("unchecked")
