@@ -20,10 +20,11 @@ import io.github.lczx.aml.tunnel.IOUtils;
 import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.tls.TlsNoCloseNotifyException;
-import org.spongycastle.crypto.tls.TlsProtocol;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
@@ -40,10 +41,10 @@ import java.nio.channels.WritableByteChannel;
     private final ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
     private Thread pipeThread;
 
-    /* package */ PayloadPipe(final TlsProtocol inProto, final TlsProtocol outProto,
+    /* package */ PayloadPipe(final InputStream inputStream, final OutputStream outputStream,
                               final DataTransferQueue transferQueue) {
-        this.input = Channels.newChannel(inProto.getInputStream());
-        this.output = Channels.newChannel(outProto.getOutputStream());
+        this.input = Channels.newChannel(inputStream);
+        this.output = Channels.newChannel(outputStream);
         this.transferQueue = transferQueue;
         transferQueue.setDataReceiver(new DelayedWriter());
     }
@@ -57,7 +58,7 @@ import java.nio.channels.WritableByteChannel;
                 try {
                     count = input.read(buffer);
                     buffer.flip();
-                } catch (final TlsNoCloseNotifyException e) {
+                } catch (final EOFException e) {
                     LOG.debug("{} got into an EOS-like situation: {}", this, e.getMessage());
                     count = -1;
                 } catch (final SocketException e) {
