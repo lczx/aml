@@ -102,6 +102,11 @@ import java.security.SecureRandom;
         LOG.debug("Upstream connection established emulating downstream client parameters, " +
                         "using upstream Server Hello response to answer downstream (dSrv: {}, uSrv: {}, params: {}",
                 downstreamTunnel, upstreamTunnel, serverParams);
+
+        final String nextProtocol = TlsProxyUtils.getNextProtocolName(serverParams.extensions);
+        if (nextProtocol != null)
+            proxyConnection.putExtra(ProxyConnection.EXTRA_TLS_NEXT_PROTOCOL_NAME, nextProtocol);
+
         ((ProxyTlsServer) tlsServer).setParams(serverParams);
     }
 

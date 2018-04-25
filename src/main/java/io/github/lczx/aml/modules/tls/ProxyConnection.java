@@ -24,6 +24,8 @@ import java.util.Map;
 
 public class ProxyConnection {
 
+    public static final String EXTRA_TLS_NEXT_PROTOCOL_NAME = "tls-alpn-next-protocol";
+
     private final Connection tcpConnection;
     private final Type proxyType;
     private final DataTransferQueue transmittingQueue = new DataTransferQueue();

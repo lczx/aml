@@ -16,7 +16,7 @@
 
 package io.github.lczx.aml.modules.tls.cert;
 
-import io.github.lczx.aml.modules.tls.TlsIOUtils;
+import io.github.lczx.aml.modules.tls.TlsProxyUtils;
 import org.spongycastle.asn1.DERNull;
 import org.spongycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
@@ -34,13 +34,13 @@ public final class CredentialsLoader {
     private CredentialsLoader() { }
 
     public static X509CertificateHolder loadCertificateX509(final InputStream inputStream) throws IOException {
-        return new X509CertificateHolder(TlsIOUtils.readAll(inputStream));
+        return new X509CertificateHolder(TlsProxyUtils.readAll(inputStream));
     }
 
     public static AsymmetricKeyParameter loadPrivateKeyDER(final InputStream inputStream) throws IOException {
         final PrivateKeyInfo p = new PrivateKeyInfo(
                 new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, DERNull.INSTANCE),
-                RSAPrivateKey.getInstance(TlsIOUtils.readAll(inputStream)));
+                RSAPrivateKey.getInstance(TlsProxyUtils.readAll(inputStream)));
         return PrivateKeyFactory.createKey(p);
     }
 

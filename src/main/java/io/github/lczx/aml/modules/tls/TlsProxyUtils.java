@@ -16,13 +16,19 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import org.spongycastle.crypto.tls.ExtensionType;
+import org.spongycastle.crypto.tls.TlsUtils;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Hashtable;
 
-public final class TlsIOUtils {
+public final class TlsProxyUtils {
 
-    private TlsIOUtils() { }
+    private TlsProxyUtils() { }
 
     public static byte[] readAll(final InputStream inputStream) throws IOException {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -31,6 +37,16 @@ public final class TlsIOUtils {
         while ((nRead = inputStream.read(buf)) != -1) out.write(buf, 0, nRead);
         out.flush();
         return out.toByteArray();
+    }
+
+    public static String getNextProtocolName(final Hashtable serverExtensions) throws IOException {
+        byte[] alpn = (byte[]) serverExtensions.get(ExtensionType.application_layer_protocol_negotiation);
+        if (alpn == null) return null;
+
+        final ByteArrayInputStream in = new ByteArrayInputStream(alpn);
+        /*int alpnLen =*/ TlsUtils.readUint16(in);
+        final int alpnStrLen = TlsUtils.readUint8(in);
+        return  new String(TlsUtils.readFully(alpnStrLen, in), StandardCharsets.UTF_8);
     }
 
 }
