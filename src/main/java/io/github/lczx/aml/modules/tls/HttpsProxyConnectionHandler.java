@@ -88,6 +88,10 @@ import java.security.SecureRandom;
                                        final ClientParameters clientParameters) throws IOException {
         final InetSocketAddress destinationSockAddress = proxyConnection.getTcpConnection().getLink().destination;
 
+        final String sniName = TlsProxyUtils.getServerName(clientParameters.extensions);
+        if (sniName != null)
+            proxyConnection.putExtra(ProxyConnection.EXTRA_TLS_SERVER_NAME, sniName);
+
         LOG.debug("Received TLS Client Hello (server: {}, params: {}), connecting upstream to {}",
                 downstreamTunnel, clientParameters, destinationSockAddress);
         final Socket upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());

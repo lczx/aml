@@ -24,6 +24,7 @@ import java.util.Map;
 
 public class ProxyConnection {
 
+    public static final String EXTRA_TLS_SERVER_NAME = "tls-sni-server-name";
     public static final String EXTRA_TLS_NEXT_PROTOCOL_NAME = "tls-alpn-next-protocol";
 
     private final Connection tcpConnection;

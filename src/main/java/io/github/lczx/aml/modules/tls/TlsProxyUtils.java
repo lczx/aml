@@ -16,8 +16,7 @@
 
 package io.github.lczx.aml.modules.tls;
 
-import org.spongycastle.crypto.tls.ExtensionType;
-import org.spongycastle.crypto.tls.TlsUtils;
+import org.spongycastle.crypto.tls.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -39,14 +38,26 @@ public final class TlsProxyUtils {
         return out.toByteArray();
     }
 
+    public static String getServerName(final Hashtable clientExtensions) throws IOException {
+        final byte[] sni = (byte[]) clientExtensions.get(ExtensionType.server_name);
+        if (sni == null) return null;
+
+        try {
+            final ServerNameList snl = TlsExtensionsUtils.getServerNameExtension(clientExtensions);
+            return ((ServerName) snl.getServerNameList().get(0)).getHostName();
+        } catch (final IllegalStateException e) {
+            return null;
+        }
+    }
+
     public static String getNextProtocolName(final Hashtable serverExtensions) throws IOException {
-        byte[] alpn = (byte[]) serverExtensions.get(ExtensionType.application_layer_protocol_negotiation);
+        final byte[] alpn = (byte[]) serverExtensions.get(ExtensionType.application_layer_protocol_negotiation);
         if (alpn == null) return null;
 
         final ByteArrayInputStream in = new ByteArrayInputStream(alpn);
         /*int alpnLen =*/ TlsUtils.readUint16(in);
         final int alpnStrLen = TlsUtils.readUint8(in);
-        return  new String(TlsUtils.readFully(alpnStrLen, in), StandardCharsets.UTF_8);
+        return new String(TlsUtils.readFully(alpnStrLen, in), StandardCharsets.UTF_8);
     }
 
 }
