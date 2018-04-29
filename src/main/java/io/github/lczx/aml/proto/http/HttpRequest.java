@@ -48,7 +48,9 @@ public class HttpRequest extends HttpHeader {
 
     public HttpBodyStream getBody() {
         if (body == null) {
-            // TODO: Implement
+            final String contentLength = getField(FIELD_CONTENT_LENGTH);
+            if (contentLength != null)
+                body = new KnownSizeBodyStream(Long.parseLong(contentLength));
         }
         return body;
     }
