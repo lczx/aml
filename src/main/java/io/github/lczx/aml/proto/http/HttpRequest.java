@@ -16,6 +16,9 @@
 
 package io.github.lczx.aml.proto.http;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class HttpRequest extends HttpHeader {
 
     public static final String FIELD_HOST = "Host";
@@ -29,6 +32,11 @@ public class HttpRequest extends HttpHeader {
     private HttpBodyStream body;
 
     public HttpRequest(final String method, final String path, final String version) {
+        this(method, path, version, new LinkedList<Field>());
+    }
+
+    public HttpRequest(final String method, final String path, final String version, final List<Field> headerFields) {
+        super(headerFields);
         this.method = method;
         this.path = path;
         this.version = version;

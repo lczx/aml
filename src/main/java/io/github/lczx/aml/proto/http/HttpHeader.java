@@ -22,7 +22,15 @@ import java.util.List;
 
 public class HttpHeader {
 
-    protected final List<Field> fields = new LinkedList<>();
+    protected final List<Field> fields;
+
+    public HttpHeader() {
+        this(new LinkedList<Field>());
+    }
+
+    public HttpHeader(final List<Field> fields) {
+        this.fields = fields;
+    }
 
     public String getField(final String name) {
         for (final Field f : fields)

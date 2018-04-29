@@ -22,10 +22,7 @@ import java.nio.ByteBuffer;
 
 public class HttpRequestReader implements Closeable {
 
-    public static final int MAX_HEADER_SIZE = 8192;
-
-    private final NonBlockingLineReader lineReader = new NonBlockingLineReader();
-    private int headerSize = 0;
+    private final HttpRequestHeaderReader headerReader = new HttpRequestHeaderReader();
     private HttpRequest currentRequest;
     private boolean isReadingBody = false;
 
@@ -43,33 +40,14 @@ public class HttpRequestReader implements Closeable {
 
                 // If the body has been fully read, prepare to process the next request
                 isReadingBody = false;
-                headerSize = 0;
                 currentRequest = null;
             }
 
-            // Try to read an header line
-            final int rem = buffer.remaining();
-            final String line = lineReader.readLine(buffer);
-            headerSize += rem - buffer.remaining();
-            if (headerSize >= MAX_HEADER_SIZE)
-                throw new IOException("Maximum header size of " + MAX_HEADER_SIZE + " bytes reached");
-
-            // If we have no line the buffer was fully consumed without reaching EOL
-            if (line == null) return null;
-
-            // If the line is empty (""), we have reached end of headers, return our current pending request
-            if (line.isEmpty()) {
+            // Try to read an HTTP header/request
+            final HttpRequest request = headerReader.readRequest(buffer);
+            if (request != null) {
                 isReadingBody = true;
-                return currentRequest;
-            }
-
-            // If we have an header line...
-            if (currentRequest == null) { // ...we don't have a pending request, parse the prime header and create new
-                final String[] primeHeader = line.trim().split(" +");
-                currentRequest = new HttpRequest(primeHeader[0], primeHeader[1], primeHeader[2]);
-            } else { // ...we have a pending request, parse the line as an header field
-                final String[] field = line.split(": *", 2);
-                currentRequest.putField(field[0], field[1]);
+                return currentRequest = request;
             }
         }
 
