@@ -26,6 +26,8 @@ public class HttpRequest extends HttpHeader {
     private final String path;
     private final String version;
 
+    private HttpBodyStream body;
+
     public HttpRequest(final String method, final String path, final String version) {
         this.method = method;
         this.path = path;
@@ -44,8 +46,16 @@ public class HttpRequest extends HttpHeader {
         return version;
     }
 
+    public HttpBodyStream getBody() {
+        if (body == null) {
+            // TODO: Implement
+        }
+        return body;
+    }
+
     @Override
     public String toString() {
         return "HttpRequest{" + method + ' ' + path + ' ' + version + ", " + fields.toString() + '}';
     }
+
 }
