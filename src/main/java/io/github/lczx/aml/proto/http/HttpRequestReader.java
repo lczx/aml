@@ -33,10 +33,10 @@ public class HttpRequestReader implements Closeable {
                 final HttpBodyStream body = currentRequest.getBody();
 
                 // ...append payload to the last request
-                if (!body.endReached()) body.appendPayload(buffer);
+                if (body.requiresMoreData()) body.appendPayload(buffer);
 
                 // If we haven't yet reached end of body, return (check if buffer.hasRemaining())
-                if (!body.endReached()) continue;
+                if (body.requiresMoreData()) continue;
 
                 // If the body has been fully read, prepare to process the next request
                 isReadingBody = false;
@@ -57,7 +57,7 @@ public class HttpRequestReader implements Closeable {
 
     @Override
     public void close() {
-        if (currentRequest != null) currentRequest.getBody().setEndReached();
+        if (currentRequest != null) currentRequest.getBody().truncateInput();
     }
 
 }

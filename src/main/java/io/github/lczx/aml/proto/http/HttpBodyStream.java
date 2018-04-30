@@ -24,9 +24,9 @@ public interface HttpBodyStream {
 
     void appendPayload(ByteBuffer buffer);
 
-    boolean endReached();
+    boolean requiresMoreData();
 
-    void setEndReached();
+    void truncateInput();
 
     InputStream getInputStream();
 
