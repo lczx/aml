@@ -16,23 +16,28 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.parser.HttpMessageHeaderReader;
 import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class HttpRequestReader implements Closeable {
+public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable {
 
-    private final HttpRequestHeaderReader headerReader = new HttpRequestHeaderReader();
-    private HttpRequest currentRequest;
+    private final HttpMessageHeaderReader<T> headerReader;
+    private T currentMessage;
     private boolean isReadingBody = false;
 
-    public HttpRequest readRequest(final ByteBuffer buffer) throws IOException {
+    public HttpMessageStreamReader(final HttpMessageHeaderReader<T> headerReader) {
+        this.headerReader = headerReader;
+    }
+
+    public T readMessage(final ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             // If we are reading body...
             if (isReadingBody) {
-                final HttpBodyStream body = currentRequest.getBody();
+                final HttpBodyStream body = currentMessage.getBody();
 
                 // ...append payload to the last request
                 if (body.requiresMoreData()) body.appendPayload(buffer);
@@ -42,14 +47,17 @@ public class HttpRequestReader implements Closeable {
 
                 // If the body has been fully read, prepare to process the next request
                 isReadingBody = false;
-                currentRequest = null;
+                currentMessage = null;
+
+                // Return before trying to handle a new message
+                return null;
             }
 
             // Try to read an HTTP header/request
-            final HttpRequest request = headerReader.readRequest(buffer);
-            if (request != null) {
+            final T message = headerReader.readMessage(buffer);
+            if (message != null) {
                 isReadingBody = true;
-                return currentRequest = request;
+                return currentMessage = message;
             }
         }
 
@@ -59,7 +67,7 @@ public class HttpRequestReader implements Closeable {
 
     @Override
     public void close() {
-        if (currentRequest != null) currentRequest.getBody().truncateInput();
+        if (currentMessage != null) currentMessage.getBody().truncateInput();
     }
 
 }

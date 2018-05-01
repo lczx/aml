@@ -20,6 +20,11 @@ import java.util.*;
 
 public class HttpHeader {
 
+    // Entity headers:  Describing the body of the message, used in both requests and responses
+    public static final String FIELD_CONTENT_LENGTH = "Content-Length";
+    public static final String FIELD_CONTENT_TYPE = "Content-Type";
+    public static final String FIELD_CONTENT_ENCODING = "Content-Encoding";
+
     protected final List<Field> fields;
 
     public HttpHeader() {
@@ -69,7 +74,7 @@ public class HttpHeader {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(final Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             final Field field = (Field) o;
@@ -79,7 +84,6 @@ public class HttpHeader {
 
         @Override
         public int hashCode() {
-
             return Objects.hash(name, value);
         }
 

@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.parser.HttpRequestHeaderReader;
 import io.github.lczx.aml.proto.http.stream.ChunkedBodyStream;
 import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
 import org.junit.Test;
@@ -36,7 +37,7 @@ import java.util.concurrent.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-public class HttpRequestReaderTest {
+public class HttpMessageReaderTest {
 
     private static final String HTTP_REQ_1_HEADERS = "POST / HTTP/1.1\n" +
             "Host: example.com\n" +
@@ -93,13 +94,14 @@ public class HttpRequestReaderTest {
                 new ByteArrayInputStream(HTTP_REQ_STREAM.getBytes(StandardCharsets.UTF_8)));
         final ByteBuffer buffer = ByteBuffer.allocate(16);
 
-        final HttpRequestReader reader = new HttpRequestReader();
+        final HttpMessageStreamReader<HttpRequest> reader =
+                new HttpMessageStreamReader<>(new HttpRequestHeaderReader());
 
         int reqIdx = 0;
         while (in.read(buffer) != -1) {
             buffer.flip();
             while (buffer.hasRemaining()) {
-                final HttpRequest req = reader.readRequest(buffer);
+                final HttpRequest req = reader.readMessage(buffer);
                 if (req != null) handleRequest(reqIdx++, req);
             }
             buffer.clear();
@@ -123,42 +125,50 @@ public class HttpRequestReaderTest {
     }
 
     private void handleRequest(final int index, final HttpRequest req) {
-        assertEquals("HTTP/1.1", req.getVersion());
-        assertEquals("example.com", req.getField(HttpRequest.FIELD_HOST));
+        final HttpRequestHeader h = req.getHeader();
+        assertEquals("HTTP/1.1", h.getVersion());
+        assertEquals("example.com", h.getField(HttpRequestHeader.FIELD_HOST));
 
         if (index == 0) {
-            assertEquals("POST", req.getMethod());
-            assertEquals("/", req.getPath());
-            assertEquals("Raving Ducks: The Final Cut ", req.getField(HttpRequest.FIELD_USER_AGENT));
-            assertEquals(HTTP_REQ_1_BODY.length(), Integer.parseInt(req.getField(HttpRequest.FIELD_CONTENT_LENGTH)));
-            assertEquals(3, req.getFields().size());
+            assertEquals("POST", h.getMethod());
+            assertEquals("/", h.getPath());
+            assertEquals(3, h.getFields().size());
+
+            assertEquals("Raving Ducks: The Final Cut ", h.getField(HttpRequestHeader.FIELD_USER_AGENT));
+            assertEquals(HTTP_REQ_1_BODY.length(), Integer.parseInt(h.getField(HttpHeader.FIELD_CONTENT_LENGTH)));
+
             futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_1_BODY);
 
         } else if (index == 1) {
-            assertEquals("POST", req.getMethod());
-            assertEquals("/kittens", req.getPath());
-            assertEquals("Trolololol/5.0 (TempleOS 5.03, x86_64) Satan/66.0.1234 SoMuchFunWithRandomUserAgents/3.5", req.getField(HttpRequest.FIELD_USER_AGENT));
-            assertEquals(HTTP_REQ_2_BODY.length(), Integer.parseInt(req.getField(HttpRequest.FIELD_CONTENT_LENGTH)));
-            assertEquals("GIMME FUE GIMME FAI GIMME DABAJABAZA", req.getField("X-Custom-Field"));
-            assertEquals(4, req.getFields().size());
+            assertEquals("POST", h.getMethod());
+            assertEquals("/kittens", h.getPath());
+            assertEquals(4, h.getFields().size());
+
+            assertEquals(
+                    "Trolololol/5.0 (TempleOS 5.03, x86_64) Satan/66.0.1234 SoMuchFunWithRandomUserAgents/3.5",
+                    h.getField(HttpRequestHeader.FIELD_USER_AGENT));
+            assertEquals(HTTP_REQ_2_BODY.length(), Integer.parseInt(h.getField(HttpHeader.FIELD_CONTENT_LENGTH)));
+            assertEquals("GIMME FUE GIMME FAI GIMME DABAJABAZA", h.getField("X-Custom-Field"));
+
             futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_2_BODY);
 
         } else if (index == 2) {
-            assertEquals("FAKE", req.getMethod());
-            assertEquals("/lol", req.getPath());
-            assertEquals("trailers", req.getField("TE"));
-            assertEquals("chunked", req.getField(HttpRequest.FIELD_TRANSFER_ENCODING));
-            assertEquals("X-Custom-Field", req.getField("Trailer"));
-            assertArrayEquals(new String[]{"X-Custom-Field", "X-Funny-Trailer"}, req.getFields("Trailer"));
+            assertEquals("FAKE", h.getMethod());
+            assertEquals("/lol", h.getPath());
+
+            assertEquals("trailers", h.getField("TE"));
+            assertEquals("chunked", h.getField(HttpResponseHeader.FIELD_TRANSFER_ENCODING));
+            assertEquals("X-Custom-Field", h.getField("Trailer"));
+            assertArrayEquals(new String[]{"X-Custom-Field", "X-Funny-Trailer"}, h.getFields("Trailer"));
+
             futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_3_BODY_CLEAR);
 
         } else if (index == 3) {
             assertEquals("Last request w/ no Content-Length, body stream should be closed with connection",
-                    req.getField("X-Description"));
+                    h.getField("X-Description"));
             futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_4_BODY);
         }
     }
-
 
     private static class ContentReaderResult {
         public byte[] data;
@@ -169,7 +179,6 @@ public class HttpRequestReaderTest {
             this.trailingHeaders = trailingHeaders;
         }
     }
-
 
     private class ContentReader implements Callable<ContentReaderResult> {
 

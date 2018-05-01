@@ -17,7 +17,7 @@
 package io.github.lczx.aml.proto.http.stream;
 
 import io.github.lczx.aml.proto.http.HttpHeader;
-import io.github.lczx.aml.proto.http.HttpHeaderReader;
+import io.github.lczx.aml.proto.http.parser.HeaderReader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,7 +32,7 @@ public class ChunkedBodyStream extends AbstractBodyStream {
     private static final int STATE_READING_TRAILER = -3; // Reading trailing headers
     private static final int STATE_END_OF_STREAM = -4;   // When the chunked stream is ended
 
-    private final HttpHeaderReader headerReader = new HttpHeaderReader();
+    private final HeaderReader headerReader = new HeaderReader();
     private int chunkRemaining = STATE_START_OF_CHUNK; // Also used as a state holder
     private List<HttpHeader.Field> trailingHeaders;
 

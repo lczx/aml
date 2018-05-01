@@ -14,33 +14,38 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.parser;
+
+import io.github.lczx.aml.proto.http.HttpHeader;
+import io.github.lczx.aml.proto.http.HttpRequest;
+import io.github.lczx.aml.proto.http.HttpRequestHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class HttpResponseHeaderReader extends HttpHeaderReader {
+public class HttpRequestHeaderReader extends HeaderReader implements HttpMessageHeaderReader<HttpRequest> {
 
-    private String version, statusCode, statusDescription;
+    private String method, path, version;
 
-    public HttpResponse readResponse(final ByteBuffer buffer) throws IOException {
+    @Override
+    public HttpRequest readMessage(final ByteBuffer buffer) throws IOException {
         final List<HttpHeader.Field> fields = readHeader(buffer);
         if (fields == null) return null;
 
-        final HttpResponse response = new HttpResponse(version, statusCode, statusDescription, fields);
+        final HttpRequestHeader header = new HttpRequestHeader(method, path, version, fields);
+        method = null;
+        path = null;
         version = null;
-        statusCode = null;
-        statusDescription = null;
-        return response;
+        return new HttpRequest(header);
     }
 
     @Override
     protected boolean parseFirstLine(final String line) {
         final String[] primeHeader = line.trim().split(" +");
-        version = primeHeader[0];
-        statusCode = primeHeader[1];
-        statusDescription = primeHeader[2];
+        method = primeHeader[0];
+        path = primeHeader[1];
+        version = primeHeader[2];
         return true;
     }
 

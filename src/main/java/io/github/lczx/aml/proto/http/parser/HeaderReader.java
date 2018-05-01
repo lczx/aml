@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.parser;
 
-import io.github.lczx.aml.proto.http.util.NonBlockingLineReader;
+import io.github.lczx.aml.proto.http.HttpHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 
-public class HttpHeaderReader {
+public class HeaderReader {
 
     public static final int MAX_HEADER_SIZE = 8192;
 
