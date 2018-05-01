@@ -31,10 +31,10 @@ public class SessionRegistry {
 
     private static final int MAX_CACHE_SIZE = 64; // TODO: Is this ideal?
 
-    private final LruCache<Link, Connection> connCache = new LruCache<>(MAX_CACHE_SIZE,
-            new LruCache.RemoveCallback<Link, Connection>() {
+    private final LruCache<Link, TcpConnection> connCache = new LruCache<>(MAX_CACHE_SIZE,
+            new LruCache.RemoveCallback<Link, TcpConnection>() {
         @Override
-        public void onRemove(final Map.Entry<Link, Connection> eldest) {
+        public void onRemove(final Map.Entry<Link, TcpConnection> eldest) {
             eldest.getValue().closeUpstreamChannel();
         }
     });
@@ -46,20 +46,20 @@ public class SessionRegistry {
         amlContext.getStatusMonitor().attachProbe(new TcpSessionProbe());
     }
 
-    /* package */ Connection getConnection(final Link key) {
+    /* package */ TcpConnection getConnection(final Link key) {
         synchronized (connCache) {
             return connCache.get(key);
         }
     }
 
-    /* package */ void putConnection(final Connection connection) {
+    /* package */ void putConnection(final TcpConnection connection) {
         synchronized (connCache) {
             connCache.put(connection.getLink(), connection);
         }
         amlContext.getEventDispatcher().sendEvent(new TcpNewConnectionEvent(connection));
     }
 
-    /* package */ void closeConnection(final Connection connection) {
+    /* package */ void closeConnection(final TcpConnection connection) {
         amlContext.getEventDispatcher().sendEvent(new TcpCloseConnectionEvent(connection));
         connection.closeUpstreamChannel();
         synchronized (connCache) {
@@ -69,7 +69,7 @@ public class SessionRegistry {
 
     /* package */ void closeAll() {
         synchronized (connCache) {
-            final Iterator<Map.Entry<Link, Connection>> it = connCache.entrySet().iterator();
+            final Iterator<Map.Entry<Link, TcpConnection>> it = connCache.entrySet().iterator();
             while (it.hasNext()) {
                 it.next().getValue().closeUpstreamChannel();
                 it.remove();
@@ -92,7 +92,7 @@ public class SessionRegistry {
             // Note: this runs on the main thread
             synchronized (connCache) {
                 final ArrayList<String> l = new ArrayList<>(connCache.size());
-                for (final Map.Entry<Link, Connection> i : connCache.entrySet())
+                for (final Map.Entry<Link, TcpConnection> i : connCache.entrySet())
                     l.add(String.format("%s -> %s", i.getKey(), i.getValue()));
 
                 m.putStringArray(BaseMeasureKeys.TCP_CONN_CACHE_DUMP, l.toArray(new String[0]));

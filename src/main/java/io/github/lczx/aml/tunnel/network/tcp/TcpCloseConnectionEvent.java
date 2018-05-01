@@ -20,13 +20,13 @@ import io.github.lczx.aml.hook.AMLEvent;
 
 public class TcpCloseConnectionEvent extends AMLEvent {
 
-    private final Connection connection;
+    private final TcpConnection connection;
 
-    /* package */ TcpCloseConnectionEvent(final Connection connection) {
+    /* package */ TcpCloseConnectionEvent(final TcpConnection connection) {
         this.connection = connection;
     }
 
-    public Connection getConnection() {
+    public TcpConnection getConnection() {
         return connection;
     }
 

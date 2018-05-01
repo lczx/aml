@@ -17,7 +17,7 @@
 package io.github.lczx.aml.tunnel.network.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
-import io.github.lczx.aml.tunnel.network.DataTransferQueue;
+import io.github.lczx.aml.tunnel.network.Connection;
 import io.github.lczx.aml.tunnel.network.Link;
 import io.github.lczx.aml.tunnel.packet.Packet;
 
@@ -27,22 +27,20 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Connection {
+public class TcpConnection extends Connection {
 
     public static final String EXTRA_DESTINATION_REDIRECT = "redirect-destination";
 
     private final Link link;
     private final TCB tcb;
     private final SocketChannel upstreamChannel;
-    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
-    private final DataTransferQueue receivingQueue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
     private boolean waitingForNetworkData;
     private SelectionKey selectionKey;
     private Packet packetAttachment;
 
-    /* package */ Connection(final Link link, final TCB tcb, final SocketChannel upstreamChannel) {
+    /* package */ TcpConnection(final Link link, final TCB tcb, final SocketChannel upstreamChannel) {
         this.link = link;
         this.tcb = tcb;
         this.upstreamChannel = upstreamChannel;
@@ -54,14 +52,6 @@ public class Connection {
 
     public SocketChannel getUpstreamChannel() {
         return upstreamChannel;
-    }
-
-    public DataTransferQueue getTransmittingQueue() {
-        return transmittingQueue;
-    }
-
-    public DataTransferQueue getReceivingQueue() {
-        return receivingQueue;
     }
 
     @SuppressWarnings("unchecked")

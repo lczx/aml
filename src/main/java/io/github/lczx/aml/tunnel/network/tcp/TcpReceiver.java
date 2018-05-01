@@ -61,7 +61,7 @@ class TcpReceiver implements Runnable {
 
                 while (keyIterator.hasNext() && !Thread.interrupted()) {
                     final SelectionKey key = keyIterator.next();
-                    final Connection connection = (Connection) key.attachment();
+                    final TcpConnection connection = (TcpConnection) key.attachment();
                     if (key.isValid()) {
                         if (key.isConnectable()) {
                             keyIterator.remove();
@@ -80,7 +80,7 @@ class TcpReceiver implements Runnable {
         }
     }
 
-    private void processConnect(final Connection connection) {
+    private void processConnect(final TcpConnection connection) {
         // This is the packet attached in TcpTransmitter#initializeConnection() [with TCP SYN options] (not a copy)
         final Packet packet = connection.getPacketAttachment();
 
@@ -109,7 +109,7 @@ class TcpReceiver implements Runnable {
         packetSink.receive(packet);
     }
 
-    private void processInput(final Connection connection) {
+    private void processInput(final TcpConnection connection) {
         synchronized (connection) {
             // This is the attached copy without options
             final Packet refPacket = Packets.makeCopy(connection.getPacketAttachment());
@@ -143,9 +143,9 @@ class TcpReceiver implements Runnable {
     }
 
     private class RxDelayedReceiver implements DataTransferQueue.DataReceiver {
-        private final Connection connection;
+        private final TcpConnection connection;
 
-        private RxDelayedReceiver(final Connection connection) {
+        private RxDelayedReceiver(final TcpConnection connection) {
             this.connection = connection;
         }
 

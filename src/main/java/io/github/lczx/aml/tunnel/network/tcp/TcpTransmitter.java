@@ -95,7 +95,7 @@ class TcpTransmitter implements Runnable {
 
         // Check if we have an open connection already
         final Link registryKey = new Link(tcp.getSourcePort(), dstSock);
-        final Connection connection = sessionRegistry.getConnection(registryKey);
+        final TcpConnection connection = sessionRegistry.getConnection(registryKey);
         if (connection == null) {
             // Not connected, establish new
             initializeConnection(registryKey, currentPacket);
@@ -132,13 +132,13 @@ class TcpTransmitter implements Runnable {
         outChannel.socket().bind(null);
         socketProtector.protect(outChannel.socket());
 
-        final Connection connection = new Connection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
+        final TcpConnection connection = new TcpConnection(registryKey, new TCB(random.nextInt(Short.MAX_VALUE + 1),
                 tcp.getSequenceNumber(), tcp.getSequenceNumber(), tcp.getAcknowledgementNumber()), outChannel);
         connection.getTcb().localAckN++; // SYN counts as a byte
         connection.getTransmittingQueue().setDataReceiver(new TxDelayedReceiver(connection));
         sessionRegistry.putConnection(connection);
 
-        InetSocketAddress dstSock = connection.getExtra(Connection.EXTRA_DESTINATION_REDIRECT);
+        InetSocketAddress dstSock = connection.getExtra(TcpConnection.EXTRA_DESTINATION_REDIRECT);
         if (dstSock == null) dstSock = registryKey.destination;
 
         try {
@@ -173,7 +173,7 @@ class TcpTransmitter implements Runnable {
         packetSink.receive(packet);
     }
 
-    private void processDuplicateSYN(final Connection connection, final Packet packet) {
+    private void processDuplicateSYN(final TcpConnection connection, final Packet packet) {
         synchronized (connection) {
             // We received a SYN: We want to increment our ACK in any case
             connection.getTcb().localAckN = packet.getLayer(TcpLayer.class).getSequenceNumber() + 1;
@@ -190,7 +190,7 @@ class TcpTransmitter implements Runnable {
         }
     }
 
-    private void processFIN(final Connection connection, final Packet packet) {
+    private void processFIN(final TcpConnection connection, final Packet packet) {
         synchronized (connection) {
             final TcpLayer tcp = packet.getLayer(TcpLayer.class);
             connection.getTcb().localAckN = tcp.getSequenceNumber() + 1;
@@ -235,7 +235,7 @@ class TcpTransmitter implements Runnable {
         packetSink.receive(packet);
     }
 
-    private void processACK(final Connection connection, final Packet packet) throws IOException {
+    private void processACK(final TcpConnection connection, final Packet packet) throws IOException {
         final TcpLayer tcp = packet.getLayer(TcpLayer.class);
         final int payloadSize = tcp.getPayloadSize(); // Must be same as backing buffer limit - end of headers
 
@@ -294,18 +294,18 @@ class TcpTransmitter implements Runnable {
         packetSink.receive(packet);
     }
 
-    private void sendRSTAndClose(final Connection connection, final Packet packet) {
+    private void sendRSTAndClose(final TcpConnection connection, final Packet packet) {
         TcpUtil.recyclePacketForEmptyResponse(packet, TcpLayer.FLAG_RST, 0, connection.getTcb().localAckN);
         packetSink.receive(packet);
         sessionRegistry.closeConnection(connection);
     }
 
-    private void closeCleanly(final Connection connection, final Packet packet) {
+    private void closeCleanly(final TcpConnection connection, final Packet packet) {
         // TODO: Recycle packet & buffer when implemented
         connection.getTransmittingQueue().putCommand(new CloseCommand());
     }
 
-    static void processChannelConnected(final Connection connection, final Packet packet) {
+    static void processChannelConnected(final TcpConnection connection, final Packet packet) {
         // The channel is connected, answer with SYN,ACK - keep options
         connection.getTcb().state = TCB.State.SYN_RECEIVED;
         // TODO: Set MSS for receiving larger packets from the device
@@ -315,9 +315,9 @@ class TcpTransmitter implements Runnable {
     }
 
     private class TxDelayedReceiver implements DataTransferQueue.DataReceiver {
-        private final Connection connection;
+        private final TcpConnection connection;
 
-        private TxDelayedReceiver(final Connection connection) {
+        private TxDelayedReceiver(final TcpConnection connection) {
             this.connection = connection;
         }
 

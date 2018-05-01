@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.network.tcp;
+package io.github.lczx.aml.tunnel.network;
 
-import io.github.lczx.aml.hook.AMLEvent;
+public abstract class Connection {
 
-public class TcpNewConnectionEvent extends AMLEvent {
+    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
+    private final DataTransferQueue receivingQueue = new DataTransferQueue();
 
-    private final TcpConnection connection;
-
-    /* package */ TcpNewConnectionEvent(final TcpConnection connection) {
-        this.connection = connection;
+    public DataTransferQueue getTransmittingQueue() {
+        return transmittingQueue;
     }
 
-    public TcpConnection getConnection() {
-        return connection;
+    public DataTransferQueue getReceivingQueue() {
+        return receivingQueue;
     }
 
 }
