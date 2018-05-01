@@ -16,6 +16,11 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.stream.ChunkedBodyStream;
+import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
+import io.github.lczx.aml.proto.http.stream.KnownSizeBodyStream;
+import io.github.lczx.aml.proto.http.stream.UndeterminedBodyStream;
+
 import java.util.LinkedList;
 import java.util.List;
 

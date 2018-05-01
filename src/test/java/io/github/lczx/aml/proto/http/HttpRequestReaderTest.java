@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.stream.ChunkedBodyStream;
+import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;

@@ -14,27 +14,20 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.stream;
 
 import java.nio.ByteBuffer;
 
-public class KnownSizeBodyStream extends AbstractBodyStream {
-
-    private long remaining;
-
-    public KnownSizeBodyStream(final long size) {
-        super(size);
-        this.remaining = size;
-    }
+public class UndeterminedBodyStream extends AbstractBodyStream {
 
     @Override
-    public synchronized void appendPayload(final ByteBuffer payload) {
-        remaining -= putData(remaining, payload);
+    public void appendPayload(final ByteBuffer payload) {
+        putData(Integer.MAX_VALUE, payload);
     }
 
     @Override
     protected boolean wantsMoreData() {
-        return remaining > 0;
+        return true;
     }
 
     @Override

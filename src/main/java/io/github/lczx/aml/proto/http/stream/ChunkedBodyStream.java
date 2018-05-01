@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.stream;
+
+import io.github.lczx.aml.proto.http.HttpHeader;
+import io.github.lczx.aml.proto.http.HttpHeaderReader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

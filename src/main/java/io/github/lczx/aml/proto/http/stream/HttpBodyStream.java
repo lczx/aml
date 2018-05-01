@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.stream;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;

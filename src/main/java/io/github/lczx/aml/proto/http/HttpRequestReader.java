@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
