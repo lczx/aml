@@ -24,6 +24,7 @@ public class HttpRequest extends HttpHeader {
     public static final String FIELD_HOST = "Host";
     public static final String FIELD_USER_AGENT = "User-Agent";
     public static final String FIELD_CONTENT_LENGTH = "Content-Length";
+    public static final String FIELD_TRANSFER_ENCODING = "Transfer-Encoding";
 
     private final String method;
     private final String path;
@@ -59,6 +60,8 @@ public class HttpRequest extends HttpHeader {
             final String contentLength = getField(FIELD_CONTENT_LENGTH);
             if (contentLength != null)
                 body = new KnownSizeBodyStream(Long.parseLong(contentLength));
+            else if ("chunked".equals(getField(FIELD_TRANSFER_ENCODING)))
+                body = new ChunkedBodyStream();
         }
         return body;
     }

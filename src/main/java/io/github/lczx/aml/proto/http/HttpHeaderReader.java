@@ -59,6 +59,10 @@ public class HttpHeaderReader {
         return null;
     }
 
+    public NonBlockingLineReader getLineReader() {
+        return lineReader;
+    }
+
     protected boolean parseFirstLine(final String line) {
         // To be overridden if special handling of prime header line is needed.
         return false;

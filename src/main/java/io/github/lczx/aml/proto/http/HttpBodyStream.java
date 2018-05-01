@@ -22,7 +22,7 @@ import java.nio.channels.ReadableByteChannel;
 
 public interface HttpBodyStream {
 
-    void appendPayload(ByteBuffer buffer);
+    void appendPayload(ByteBuffer payload);
 
     boolean requiresMoreData();
 
