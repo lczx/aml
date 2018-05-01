@@ -72,8 +72,15 @@ public class HttpRequestReaderTest {
     private static final String HTTP_REQ_3_BODY_CLEAR = "This is a nice chunked body stream made especially for this" +
             " weird test, I have to make this chunk 82 bytes long to blablabla\r\n";
 
+    private static final String HTTP_REQ_4_HEADERS = "POST /ohmy HTTP/1.1\r\n" +
+            "Host: example.com\r\n" +
+            "X-Description: Last request w/ no Content-Length, body stream should be closed with connection\r\n\r\n";
+    private static final String HTTP_REQ_4_BODY = "The quick brown fox jumped over the lazy dog\n";
+
+
     private static final String HTTP_REQ_STREAM = HTTP_REQ_1_HEADERS + HTTP_REQ_1_BODY +
-            HTTP_REQ_2_HEADERS + HTTP_REQ_2_BODY + HTTP_REQ_3_HEADERS + HTTP_REQ_3_BODY;
+            HTTP_REQ_2_HEADERS + HTTP_REQ_2_BODY + HTTP_REQ_3_HEADERS + HTTP_REQ_3_BODY +
+            HTTP_REQ_4_HEADERS + HTTP_REQ_4_BODY;
 
     private final ExecutorService exec = Executors.newFixedThreadPool(2);
     private final Map<Future<ContentReaderResult>, String> futures = new HashMap<>();
@@ -96,6 +103,7 @@ public class HttpRequestReaderTest {
             buffer.clear();
         }
 
+        reader.close();
         exec.shutdown();
         exec.awaitTermination(0, TimeUnit.SECONDS);
 
@@ -141,6 +149,11 @@ public class HttpRequestReaderTest {
             assertEquals("X-Custom-Field", req.getField("Trailer"));
             assertArrayEquals(new String[]{"X-Custom-Field", "X-Funny-Trailer"}, req.getFields("Trailer"));
             futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_3_BODY_CLEAR);
+
+        } else if (index == 3) {
+            assertEquals("Last request w/ no Content-Length, body stream should be closed with connection",
+                    req.getField("X-Description"));
+            futures.put(exec.submit(new ContentReader(req.getBody())), HTTP_REQ_4_BODY);
         }
     }
 

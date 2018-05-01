@@ -62,6 +62,8 @@ public class HttpRequest extends HttpHeader {
                 body = new KnownSizeBodyStream(Long.parseLong(contentLength));
             else if ("chunked".equals(getField(FIELD_TRANSFER_ENCODING)))
                 body = new ChunkedBodyStream();
+            else
+                body = new UndeterminedBodyStream();
         }
         return body;
     }
