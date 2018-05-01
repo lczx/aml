@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.util.NonBlockingLineReader;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;

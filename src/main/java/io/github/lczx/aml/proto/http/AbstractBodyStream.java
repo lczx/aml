@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.util.RingBuffer;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
