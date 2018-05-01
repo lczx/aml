@@ -16,9 +16,7 @@
 
 package io.github.lczx.aml.proto.http;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class HttpHeader {
 
@@ -61,6 +59,21 @@ public class HttpHeader {
 
         public String getValue() {
             return value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final Field field = (Field) o;
+            return Objects.equals(name, field.name) &&
+                    Objects.equals(value, field.value);
+        }
+
+        @Override
+        public int hashCode() {
+
+            return Objects.hash(name, value);
         }
 
         @Override
