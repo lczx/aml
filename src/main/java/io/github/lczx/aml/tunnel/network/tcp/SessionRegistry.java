@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.network.tcp;
 
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
-import io.github.lczx.aml.tunnel.protocol.Link;
-import io.github.lczx.aml.tunnel.protocol.LruCache;
+import io.github.lczx.aml.tunnel.network.Link;
+import io.github.lczx.aml.tunnel.network.LruCache;
 
 import java.util.ArrayList;
 import java.util.Iterator;

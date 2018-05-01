@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol;
+package io.github.lczx.aml.tunnel.network;
 
+import io.github.lczx.aml.tunnel.network.tcp.TcpNetworkInterface;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,10 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 

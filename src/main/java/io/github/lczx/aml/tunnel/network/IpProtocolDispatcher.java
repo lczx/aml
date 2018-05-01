@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol;
+package io.github.lczx.aml.tunnel.network;
 
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;

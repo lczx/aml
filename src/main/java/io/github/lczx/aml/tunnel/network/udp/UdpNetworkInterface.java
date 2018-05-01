@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.network.udp;
 
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
@@ -22,7 +22,7 @@ import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
-import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
+import io.github.lczx.aml.tunnel.network.ProtocolNetworkInterface;
 
 import java.io.IOException;
 import java.nio.channels.Selector;

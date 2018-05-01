@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol;
+package io.github.lczx.aml.tunnel.network;
 
+import io.github.lczx.aml.tunnel.network.udp.UdpNetworkInterface;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.UdpLayer;
 import io.github.lczx.aml.tunnel.packet.editor.PayloadEditor;
-import io.github.lczx.aml.tunnel.protocol.udp.UdpNetworkInterface;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 

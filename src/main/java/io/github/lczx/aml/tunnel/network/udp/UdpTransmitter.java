@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.udp;
+package io.github.lczx.aml.tunnel.network.udp;
 
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
 import io.github.lczx.aml.tunnel.PacketSource;
+import io.github.lczx.aml.tunnel.network.Link;
+import io.github.lczx.aml.tunnel.network.LruCache;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.UdpLayer;
-import io.github.lczx.aml.tunnel.protocol.Link;
-import io.github.lczx.aml.tunnel.protocol.LruCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

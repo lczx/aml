@@ -17,7 +17,7 @@
 package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.tunnel.IOUtils;
-import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
+import io.github.lczx.aml.tunnel.network.DataTransferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

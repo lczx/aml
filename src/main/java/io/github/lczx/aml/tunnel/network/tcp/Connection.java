@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.network.tcp;
 
 import io.github.lczx.aml.tunnel.IOUtils;
+import io.github.lczx.aml.tunnel.network.DataTransferQueue;
+import io.github.lczx.aml.tunnel.network.Link;
 import io.github.lczx.aml.tunnel.packet.Packet;
-import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
-import io.github.lczx.aml.tunnel.protocol.Link;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;

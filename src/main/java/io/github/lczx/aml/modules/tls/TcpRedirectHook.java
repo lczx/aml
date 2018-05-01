@@ -18,9 +18,9 @@ package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.hook.AMLEvent;
 import io.github.lczx.aml.hook.AMLEventListener;
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpCloseConnectionEvent;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.Connection;
+import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

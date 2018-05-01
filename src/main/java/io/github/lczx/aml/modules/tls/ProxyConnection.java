@@ -16,8 +16,8 @@
 
 package io.github.lczx.aml.modules.tls;
 
-import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
+import io.github.lczx.aml.tunnel.network.DataTransferQueue;
+import io.github.lczx.aml.tunnel.network.tcp.Connection;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.network.udp;
 
-import io.github.lczx.aml.hook.AMLEvent;
+import java.net.InetSocketAddress;
 
-public class TcpCloseConnectionEvent extends AMLEvent {
+class LinkInfo {
 
-    private final Connection connection;
+    final InetSocketAddress localSocket;
+    final InetSocketAddress remoteSocket;
 
-    /* package */ TcpCloseConnectionEvent(final Connection connection) {
-        this.connection = connection;
-    }
-
-    public Connection getConnection() {
-        return connection;
+    LinkInfo(final InetSocketAddress localSocket, final InetSocketAddress remoteSocket) {
+        this.localSocket = localSocket;
+        this.remoteSocket = remoteSocket;
     }
 
 }

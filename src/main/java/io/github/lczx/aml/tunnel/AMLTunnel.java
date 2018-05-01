@@ -27,10 +27,10 @@ import io.github.lczx.aml.hook.ReflectiveModuleLoader;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
-import io.github.lczx.aml.tunnel.protocol.IpProtocolDispatcher;
-import io.github.lczx.aml.tunnel.protocol.ProtocolNetworkInterface;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNetworkInterface;
-import io.github.lczx.aml.tunnel.protocol.udp.UdpNetworkInterface;
+import io.github.lczx.aml.tunnel.network.IpProtocolDispatcher;
+import io.github.lczx.aml.tunnel.network.ProtocolNetworkInterface;
+import io.github.lczx.aml.tunnel.network.tcp.TcpNetworkInterface;
+import io.github.lczx.aml.tunnel.network.udp.UdpNetworkInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

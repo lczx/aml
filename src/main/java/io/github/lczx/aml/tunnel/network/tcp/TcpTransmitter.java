@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.network.tcp;
 
 import io.github.lczx.aml.tunnel.PacketSink;
 import io.github.lczx.aml.tunnel.PacketSource;
 import io.github.lczx.aml.tunnel.SocketProtector;
+import io.github.lczx.aml.tunnel.network.DataTransferQueue;
+import io.github.lczx.aml.tunnel.network.Link;
 import io.github.lczx.aml.tunnel.packet.IPv4Layer;
 import io.github.lczx.aml.tunnel.packet.Packet;
 import io.github.lczx.aml.tunnel.packet.Packets;
 import io.github.lczx.aml.tunnel.packet.TcpLayer;
-import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
-import io.github.lczx.aml.tunnel.protocol.Link;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

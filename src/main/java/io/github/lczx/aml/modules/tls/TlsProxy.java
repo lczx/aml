@@ -25,8 +25,8 @@ import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.tunnel.AMLTunnelService;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpCloseConnectionEvent;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 
 import java.io.IOException;
 

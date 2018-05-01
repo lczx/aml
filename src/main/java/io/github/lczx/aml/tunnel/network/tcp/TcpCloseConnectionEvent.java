@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel.protocol.tcp;
+package io.github.lczx.aml.tunnel.network.tcp;
 
 import io.github.lczx.aml.hook.AMLEvent;
 
-public class TcpNewConnectionEvent extends AMLEvent {
+public class TcpCloseConnectionEvent extends AMLEvent {
 
     private final Connection connection;
 
-    /* package */ TcpNewConnectionEvent(final Connection connection) {
+    /* package */ TcpCloseConnectionEvent(final Connection connection) {
         this.connection = connection;
     }
 
