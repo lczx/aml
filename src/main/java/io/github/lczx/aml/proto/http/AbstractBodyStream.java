@@ -47,6 +47,19 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
     @Override
     public void truncateInput() {
         truncated = true;
+        notifyAll();
+    }
+
+    @Override
+    public InputStream getInputStream() {
+        if (bodyStream == null) bodyStream = new PayloadInputStream();
+        return bodyStream;
+    }
+
+    @Override
+    public ReadableByteChannel getChannel() {
+        if (bodyChannel == null) bodyChannel = new PayloadChannel();
+        return bodyChannel;
     }
 
     protected abstract boolean wantsMoreData();
@@ -62,11 +75,11 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
                 // at this point it will probably get never requested so we discard it and do not write more data
                 buffer = null;
             }
-            notifyAll();
         } else {
             //  If we don't have a buffer, simulate the read
             payload.position(payload.position() + toRead);
         }
+        notifyAll();
         return toRead;
     }
 
@@ -92,18 +105,6 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
                 wait();
             } catch (final InterruptedException e) { /* ignore */ }
         }
-    }
-
-    @Override
-    public InputStream getInputStream() {
-        if (bodyStream == null) bodyStream = new PayloadInputStream();
-        return bodyStream;
-    }
-
-    @Override
-    public ReadableByteChannel getChannel() {
-        if (bodyChannel == null) bodyChannel = new PayloadChannel();
-        return bodyChannel;
     }
 
     private class PayloadInputStream extends InputStream {
