@@ -45,7 +45,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
     }
 
     @Override
-    public void truncateInput() {
+    public synchronized void truncateInput() {
         truncated = true;
         notifyAll();
     }
