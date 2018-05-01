@@ -20,27 +20,27 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class HttpRequestHeaderReader extends HttpHeaderReader {
+public class HttpResponseHeaderReader extends HttpHeaderReader {
 
-    private String method, path, version;
+    private String version, statusCode, statusDescription;
 
-    public HttpRequest readRequest(final ByteBuffer buffer) throws IOException {
+    public HttpResponse readResponse(final ByteBuffer buffer) throws IOException {
         final List<HttpHeader.Field> fields = readHeader(buffer);
         if (fields == null) return null;
 
-        final HttpRequest request = new HttpRequest(method, path, version, fields);
-        method = null;
-        path = null;
+        final HttpResponse response = new HttpResponse(version, statusCode, statusDescription, fields);
         version = null;
-        return request;
+        statusCode = null;
+        statusDescription = null;
+        return response;
     }
 
     @Override
     protected boolean parseFirstLine(final String line) {
         final String[] primeHeader = line.trim().split(" +");
-        method = primeHeader[0];
-        path = primeHeader[1];
-        version = primeHeader[2];
+        version = primeHeader[0];
+        statusCode = primeHeader[1];
+        statusDescription = primeHeader[2];
         return true;
     }
 
