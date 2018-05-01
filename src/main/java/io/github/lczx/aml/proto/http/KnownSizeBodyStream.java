@@ -29,8 +29,7 @@ public class KnownSizeBodyStream extends AbstractBodyStream {
 
     @Override
     public synchronized void appendPayload(final ByteBuffer payload) {
-        final int toRead = (int) Math.min(remaining, payload.remaining());
-        remaining -= putData(toRead, payload);
+        remaining -= putData(remaining, payload);
     }
 
     @Override

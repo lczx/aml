@@ -66,7 +66,9 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
 
     protected abstract boolean isStreamClosed();
 
-    protected synchronized int putData(final int toRead, final ByteBuffer payload) {
+    protected synchronized int putData(final long remaining, final ByteBuffer payload) {
+        final int toRead = (int) Math.min(payload.remaining(), remaining);
+
         // Write data to our temporary buffer if we have it
         if (buffer != null) {
             final int actuallyRead = buffer.put(payload, toRead);
@@ -116,7 +118,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
         }
 
         @Override
-        public int read(byte[] b) throws IOException {
+        public int read(final byte[] b) throws IOException {
             if (blockRead()) return -1;
             return buffer.get(b);
         }
@@ -128,7 +130,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
         }
 
         @Override
-        public long skip(long n) throws IOException {
+        public long skip(final long n) throws IOException {
             if (buffer == null) throw new IOException("Stream dropped because cache was filled");
             return buffer.skip((int) n);
         }
