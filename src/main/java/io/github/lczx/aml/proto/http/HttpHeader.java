@@ -36,6 +36,13 @@ public class HttpHeader {
         return null;
     }
 
+    public String[] getFields(final String name) {
+        final List<String> values = new ArrayList<>();
+        for (final Field f : fields)
+            if (name.equalsIgnoreCase(f.name)) values.add(f.value);
+        return values.toArray(new String[0]);
+    }
+
     public void putField(final String name, final String value) {
         fields.add(new Field(name, value));
     }
