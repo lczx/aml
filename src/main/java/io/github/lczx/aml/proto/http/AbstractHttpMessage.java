@@ -38,6 +38,14 @@ public abstract class AbstractHttpMessage<H extends HttpHeader> implements HttpM
         return bodyStream;
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + '{' +
+                "header=" + header +
+                ", bodyStream=" + (bodyStream == null ? "not-initialized" : bodyStream) +
+                '}';
+    }
+
     protected abstract HttpBodyStream createBodyStream();
 
 }
