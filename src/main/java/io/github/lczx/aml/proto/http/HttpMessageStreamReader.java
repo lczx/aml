@@ -24,6 +24,18 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+/**
+ * This class extracts HTTP messages from a succession of {@link ByteBuffer byte buffers}.
+ *
+ * <p> Pass buffers to {@link #readMessage(ByteBuffer)} to read them; when an header has been fully read it is returned
+ * from this method and the reader starts to read the body of the message, which can in turn be retrieved from the
+ * {@link HttpBodyStream} attached to the message.
+ *
+ * <p> Once a message (header + body) has been fully read, {@link #hasPendingMessage()} returns {@code false}.
+ * A further call to {@link #readMessage(ByteBuffer)} will start reading a new message.
+ *
+ * @param <T> The type of message that this instance is supposed to read
+ */
 public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable {
 
     private final HttpMessageHeaderReader<T> headerReader;
@@ -34,6 +46,29 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
         this.headerReader = headerReader;
     }
 
+    /**
+     * Attempts to read an HTTP  message from the given {@link ByteBuffer}.
+     *
+     * <p> This method can be called multiple times and accumulates data until a message is read.
+     * It returns in the following circumstances:
+     * <ul>
+     * <li>
+     * The input buffer is exhausted (i.e. {@link ByteBuffer#hasRemaining()} returns {@code false});
+     * </li>
+     * <li>
+     * A message header has been fully read (and returned from this method), no further bytes are read
+     * from the message body, in this case the buffer may not be fully consumed;
+     * </li>
+     * <li>
+     * A message has been read completely, call {@link #hasPendingMessage()} to see if this condition is met,
+     * also in this case the buffer may not be fully consumed.
+     * </li>
+     * </ul>
+     *
+     * @param buffer The buffer with data to read
+     * @return An HTTP message if an header has been read, {@code null} if no result is available yet
+     * @throws IOException If an I/O error occurs while reading the header
+     */
     public T readMessage(final ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             // If we have a current message, it means that we are still reading its body
@@ -74,6 +109,13 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
         return hasPendingMessage;
     }
 
+    /**
+     * Closes this reader, removing references to any message being processed and, if its body is being processed,
+     * truncating its stream.
+     *
+     * <p> This method should be called when the underlying connection is closed. An instance of {@link HttpBodyStream}
+     * may rely on this to terminate its stream (e.g. responses with undetermined size)
+     */
     @Override
     public void close() {
         if (currentMessage != null) {
