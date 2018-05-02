@@ -75,7 +75,12 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
 
     @Override
     public void close() {
-        if (currentMessage != null) currentMessage.getBody().truncateInput();
+        if (currentMessage != null) {
+            currentMessage.getBody().truncateInput();
+            currentMessage = null;
+        }
+        headerReader.clear();
+        hasPendingMessage = false;
     }
 
 }

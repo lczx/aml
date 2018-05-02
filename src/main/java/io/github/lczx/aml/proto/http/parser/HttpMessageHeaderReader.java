@@ -27,4 +27,6 @@ public interface HttpMessageHeaderReader<T extends HttpMessage> {
 
     int getBytesRead();
 
+    void clear();
+
 }
