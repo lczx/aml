@@ -18,7 +18,10 @@ package io.github.lczx.aml.proto.http;
 
 import io.github.lczx.aml.proto.http.HttpTestUtils.ContentReader;
 import io.github.lczx.aml.proto.http.HttpTestUtils.ContentReaderResult;
-import io.github.lczx.aml.proto.http.model.*;
+import io.github.lczx.aml.proto.http.model.HttpHeader;
+import io.github.lczx.aml.proto.http.model.HttpRequestHeader;
+import io.github.lczx.aml.proto.http.model.HttpResponse;
+import io.github.lczx.aml.proto.http.model.HttpResponseHeader;
 import io.github.lczx.aml.proto.http.parser.HttpResponseHeaderReader;
 import org.junit.Test;
 
@@ -90,7 +93,7 @@ public class HttpResponseReaderTest {
 
         if (index == 0) {
             // This is the response to HEAD, let it be before attempting to read body
-            ans.setRequest(new HttpRequest(new HttpRequestHeader("HEAD", "/", HTTP_VERSION)));
+            ans.setRequestHeader(new HttpRequestHeader("HEAD", "/", HTTP_VERSION));
             futures.put(exec.submit(new ContentReader(ans.getBody())), null);
 
         } else if (index == 1) {

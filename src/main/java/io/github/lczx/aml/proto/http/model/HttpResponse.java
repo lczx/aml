@@ -20,14 +20,14 @@ import io.github.lczx.aml.proto.http.stream.*;
 
 public class HttpResponse extends AbstractHttpMessage<HttpResponseHeader> {
 
-    private HttpRequest request;
+    private HttpRequestHeader requestHeader;
 
     public HttpResponse(final HttpResponseHeader header) {
         super(header);
     }
 
-    public void setRequest(final HttpRequest request) {
-        this.request = request;
+    public void setRequestHeader(final HttpRequestHeader requestHeader) {
+        this.requestHeader = requestHeader;
     }
 
     @Override
@@ -57,7 +57,7 @@ public class HttpResponse extends AbstractHttpMessage<HttpResponseHeader> {
         if ((responseCode >= 100 && responseCode < 200) || responseCode == 204 || responseCode == 304)
             return true;
 
-        if (request != null && "HEAD".equalsIgnoreCase(request.getHeader().getMethod()))
+        if (requestHeader != null && "HEAD".equalsIgnoreCase(requestHeader.getMethod()))
             return true;
 
         return false;

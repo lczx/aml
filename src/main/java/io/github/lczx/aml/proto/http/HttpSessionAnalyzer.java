@@ -17,6 +17,7 @@
 package io.github.lczx.aml.proto.http;
 
 import io.github.lczx.aml.proto.http.model.HttpRequest;
+import io.github.lczx.aml.proto.http.model.HttpRequestHeader;
 import io.github.lczx.aml.proto.http.model.HttpResponse;
 import io.github.lczx.aml.proto.http.parser.HttpRequestHeaderReader;
 import io.github.lczx.aml.proto.http.parser.HttpResponseHeaderReader;
@@ -38,7 +39,7 @@ public class HttpSessionAnalyzer implements Closeable {
     private final MessageCallback callback;
 
     private boolean receiving = false;
-    private HttpRequest lastRequest;
+    private HttpRequestHeader lastRequestHeader;
 
     public HttpSessionAnalyzer(final MessageCallback callback) {
         this.callback = callback;
@@ -50,7 +51,7 @@ public class HttpSessionAnalyzer implements Closeable {
         while (buffer.hasRemaining()) {
             final HttpRequest req = requestReader.readMessage(buffer);
             if (req != null) {
-                lastRequest = req;
+                lastRequestHeader = req.getHeader();
                 callback.onRequest(req);
                 // Read body while buffer.hasRemaining()
             }
@@ -71,8 +72,8 @@ public class HttpSessionAnalyzer implements Closeable {
         while (buffer.hasRemaining()) {
             final HttpResponse ans = responseReader.readMessage(buffer);
             if (ans != null) {
-                ans.setRequest(lastRequest);
-                lastRequest = null;
+                ans.setRequestHeader(lastRequestHeader);
+                lastRequestHeader = null;
                 callback.onResponse(ans);
                 // Read payload while buffer.hasRemaining()
             }
