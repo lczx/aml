@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.proto.http;
+package io.github.lczx.aml.proto.http.model;
 
 import java.util.*;
 

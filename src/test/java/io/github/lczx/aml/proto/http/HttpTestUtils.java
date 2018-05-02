@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.model.HttpHeader;
 import io.github.lczx.aml.proto.http.stream.ChunkedBodyStream;
 import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
 

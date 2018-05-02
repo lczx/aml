@@ -16,7 +16,7 @@
 
 package io.github.lczx.aml.proto.http.parser;
 
-import io.github.lczx.aml.proto.http.HttpHeader;
+import io.github.lczx.aml.proto.http.model.HttpHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

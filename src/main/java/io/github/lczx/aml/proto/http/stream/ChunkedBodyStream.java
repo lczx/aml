@@ -16,7 +16,7 @@
 
 package io.github.lczx.aml.proto.http.stream;
 
-import io.github.lczx.aml.proto.http.HttpHeader;
+import io.github.lczx.aml.proto.http.model.HttpHeader;
 import io.github.lczx.aml.proto.http.parser.HeaderReader;
 
 import java.io.IOException;

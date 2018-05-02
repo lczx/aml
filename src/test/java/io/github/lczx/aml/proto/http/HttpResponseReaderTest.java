@@ -18,6 +18,7 @@ package io.github.lczx.aml.proto.http;
 
 import io.github.lczx.aml.proto.http.HttpTestUtils.ContentReader;
 import io.github.lczx.aml.proto.http.HttpTestUtils.ContentReaderResult;
+import io.github.lczx.aml.proto.http.model.*;
 import io.github.lczx.aml.proto.http.parser.HttpResponseHeaderReader;
 import org.junit.Test;
 

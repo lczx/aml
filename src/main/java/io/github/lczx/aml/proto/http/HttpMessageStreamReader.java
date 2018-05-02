@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.model.HttpMessage;
 import io.github.lczx.aml.proto.http.parser.HttpMessageHeaderReader;
 import io.github.lczx.aml.proto.http.stream.HttpBodyStream;
 

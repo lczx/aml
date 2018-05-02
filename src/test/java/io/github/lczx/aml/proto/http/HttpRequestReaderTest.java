@@ -16,6 +16,10 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.model.HttpHeader;
+import io.github.lczx.aml.proto.http.model.HttpRequest;
+import io.github.lczx.aml.proto.http.model.HttpRequestHeader;
+import io.github.lczx.aml.proto.http.model.HttpResponseHeader;
 import io.github.lczx.aml.proto.http.parser.HttpRequestHeaderReader;
 import org.junit.Test;
 

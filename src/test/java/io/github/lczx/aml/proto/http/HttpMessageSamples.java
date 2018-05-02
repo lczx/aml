@@ -16,6 +16,8 @@
 
 package io.github.lczx.aml.proto.http;
 
+import io.github.lczx.aml.proto.http.model.HttpHeader;
+
 import java.util.Arrays;
 import java.util.List;
 
