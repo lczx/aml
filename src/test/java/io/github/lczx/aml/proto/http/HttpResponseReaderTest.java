@@ -62,6 +62,10 @@ public class HttpResponseReaderTest {
             buffer.flip();
             while (buffer.hasRemaining()) {
                 final HttpResponse ans = reader.readMessage(buffer);
+                // Configure message before calling hasPendingMessage() as documented
+                if (ans != null && ansIdx == 0) // Set request hint to HEAD response before attempting to read body
+                    ans.setRequestHeader(new HttpRequestHeader("HEAD", "/", HTTP_VERSION));
+
                 if (!reader.hasPendingMessage()) actAnsIdx++;
                 System.out.printf("%d\t%b\t%s\n", buffer.remaining(), reader.hasPendingMessage(), ans);
 
@@ -70,6 +74,11 @@ public class HttpResponseReaderTest {
                             "was given and is processing a message", buffer.hasRemaining());
 
                 if (ans != null) handleResponse(ansIdx++, ans);
+
+                // If we ans.setRequestHeader() here, a parsing error occurs because the body stream is built (by the
+                // first call to ans.getBody() in reader.hasPendingMessage() or handleResponse()) before setting the
+                // request hint to HEAD (thus wrongly sizing body to Content-Length instead of zero).
+                // This treats part of the second request as the body of the first resulting in an header parse error.
             }
             buffer.clear();
         }
@@ -92,10 +101,7 @@ public class HttpResponseReaderTest {
         assertEquals(Ans1.BODY.length(), Integer.parseInt(h.getField(HttpHeader.FIELD_CONTENT_LENGTH)));
 
         if (index == 0) {
-            // This is the response to HEAD, let it be before attempting to read body
-            ans.setRequestHeader(new HttpRequestHeader("HEAD", "/", HTTP_VERSION));
             futures.put(exec.submit(new ContentReader(ans.getBody())), null);
-
         } else if (index == 1) {
             futures.put(exec.submit(new ContentReader(ans.getBody())), Ans1.BODY);
         }

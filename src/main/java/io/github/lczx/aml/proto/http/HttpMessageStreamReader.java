@@ -57,7 +57,9 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
      * </li>
      * <li>
      * A message header has been fully read (and returned from this method), no further bytes are read
-     * from the message body, in this case the buffer may not be fully consumed;
+     * from the message body, in this case the buffer may not be fully consumed. The message should be capable to
+     * determine its body stream before attempting further calls to this method (see documentation of
+     * {@link #hasPendingMessage()} for more info);
      * </li>
      * <li>
      * A message has been read completely, call {@link #hasPendingMessage()} to see if this condition is met,
@@ -103,9 +105,17 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
     /**
      * Returns {@code true} if this reader is currently processing a message.
      *
+     * <p> If this method is called just after getting a message, make sure that the given message is in the proper
+     * condition to determine the type of its body (e.g. pass request header to response in order to check if it has
+     * no data in response to HEAD).
+     *
      * @return {@code false} if this reader has no partial message in its buffer
      */
     public boolean hasPendingMessage() {
+        if (currentMessage != null && !currentMessage.getBody().requiresMoreData()) {
+            hasPendingMessage = false;
+            currentMessage = null;
+        }
         return hasPendingMessage;
     }
 

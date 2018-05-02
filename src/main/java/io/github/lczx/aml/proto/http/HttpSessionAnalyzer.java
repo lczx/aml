@@ -56,8 +56,6 @@ public class HttpSessionAnalyzer implements Closeable {
                 // Read body while buffer.hasRemaining()
             }
             if (!requestReader.hasPendingMessage()) {
-                // TODO: If the message has empty body (like GET) we will get in here only after attempting to read
-                // TODO: the body. But since we have no data, this method may not be called again before downlink.
                 receiving = true;
                 if (buffer.hasRemaining())
                     LOG.warn("Request ended but buffer has more content");
@@ -78,7 +76,6 @@ public class HttpSessionAnalyzer implements Closeable {
                 // Read payload while buffer.hasRemaining()
             }
             if (!responseReader.hasPendingMessage()) {
-                // TODO: Read TODO above, it also applies here (e.g. answers to HEAD)
                 receiving = false;
                 if (buffer.hasRemaining())
                     LOG.warn("Response ended but buffer has more content");
