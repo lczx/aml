@@ -146,8 +146,26 @@ final class HttpMessageSamples {
                 CUSTOM_KEY + ": " + CUSTOM_VALUE + "\r\n" +
                 "\r\n" + BODY;
 
-
         private Req6() { }
+    }
+
+    // Standard 200 OK answer
+    static final class Ans1 {
+        static final int STATUS_CODE = 200;
+        static final String STATUS_MESSAGE = "OK";
+        static final int FIELD_COUNT = 2;
+        static final String SERVER = "WS 1.0";
+        static final String BODY =
+                "<!doctype html><html><head><title>Ehm</title></head><body><h1>Aloha!</h1></body></html>\n";
+
+        static final String VALUE_HEAD = HTTP_VERSION + ' ' + STATUS_CODE + ' ' + STATUS_MESSAGE + "\r\n" +
+                "Server: " + SERVER + "\r\n" +
+                "Content-Length: " + BODY.length() + "\r\n" +
+                "\r\n";
+
+        static final String VALUE = VALUE_HEAD + BODY;
+
+        private Ans1() { }
     }
 
     private HttpMessageSamples() { }

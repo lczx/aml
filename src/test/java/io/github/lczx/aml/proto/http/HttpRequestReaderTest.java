@@ -32,8 +32,7 @@ import java.util.concurrent.*;
 import static io.github.lczx.aml.proto.http.HttpMessageSamples.*;
 import static io.github.lczx.aml.proto.http.HttpTestUtils.ContentReader;
 import static io.github.lczx.aml.proto.http.HttpTestUtils.ContentReaderResult;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class HttpRequestReaderTest {
 
@@ -54,11 +53,18 @@ public class HttpRequestReaderTest {
 
         int reqIdx = 0;
         int actReqIdx = 0;
+        System.out.println("REM\tPENDING\tMSG");
         while (in.read(buffer) != -1) {
             buffer.flip();
             while (buffer.hasRemaining()) {
-                if (!reader.hasPendingMessage()) actReqIdx++; // Increment by 1 if last message is closing
                 final HttpRequest req = reader.readMessage(buffer);
+                if (!reader.hasPendingMessage()) actReqIdx++;
+                System.out.printf("%d\t%b\t%s\n", buffer.remaining(), reader.hasPendingMessage(), req);
+
+                if (req == null && reader.hasPendingMessage())
+                    assertFalse("Buffer should be fully consumed if no result " +
+                            "was given and is processing a message", buffer.hasRemaining());
+
                 if (req != null) handleRequest(reqIdx++, req);
             }
             buffer.clear();
@@ -68,19 +74,9 @@ public class HttpRequestReaderTest {
         exec.shutdown();
         exec.awaitTermination(0, TimeUnit.SECONDS);
 
-        assertEquals(reqIdx, actReqIdx);
+        assertEquals(reqIdx, actReqIdx + 1 /* because last message was interrupted */);
         assertEquals(reqIdx, futures.size());
-        for (Map.Entry<Future<ContentReaderResult>, String> e : futures.entrySet()) {
-            final ContentReaderResult result = e.getKey().get();
-
-            if (e.getValue() == null)
-                assertEquals(0, result.data.length);
-            else {
-                assertArrayEquals(e.getValue().getBytes(StandardCharsets.UTF_8), result.data);
-                if (result.trailingHeaders != null)
-                    assertEquals(Req5.TRAILING_HEADERS, result.trailingHeaders);
-            }
-        }
+        checkResults();
     }
 
     private void handleRequest(final int index, final HttpRequest req) {
@@ -147,8 +143,20 @@ public class HttpRequestReaderTest {
             assertEquals(Req6.CUSTOM_VALUE, h.getField(Req6.CUSTOM_KEY));
             futures.put(exec.submit(new ContentReader(req.getBody())), Req6.BODY);
         }
+    }
 
-        System.out.println(req);
+    private void checkResults() throws ExecutionException, InterruptedException {
+        for (final Map.Entry<Future<ContentReaderResult>, String> e : futures.entrySet()) {
+            final ContentReaderResult result = e.getKey().get();
+
+            if (e.getValue() == null)
+                assertEquals(0, result.data.length);
+            else {
+                assertArrayEquals(e.getValue().getBytes(StandardCharsets.UTF_8), result.data);
+                if (result.trailingHeaders != null)
+                    assertEquals(Req5.TRAILING_HEADERS, result.trailingHeaders);
+            }
+        }
     }
 
 }

@@ -21,6 +21,7 @@ import java.util.List;
 
 public class HttpResponseHeader extends HttpHeader {
 
+    public static final String FIELD_SERVER = "Server";
     public static final String FIELD_TRANSFER_ENCODING = "Transfer-Encoding";
 
     private final String version;
