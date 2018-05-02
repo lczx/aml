@@ -61,6 +61,10 @@ public class HeaderReader {
         return null;
     }
 
+    public int getBytesRead() {
+        return bytesRead;
+    }
+
     public NonBlockingLineReader getLineReader() {
         return lineReader;
     }

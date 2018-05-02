@@ -27,7 +27,7 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
 
     private final HttpMessageHeaderReader<T> headerReader;
     private T currentMessage;
-    private boolean isReadingBody = false;
+    private boolean hasPendingMessage = false;
 
     public HttpMessageStreamReader(final HttpMessageHeaderReader<T> headerReader) {
         this.headerReader = headerReader;
@@ -35,8 +35,9 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
 
     public T readMessage(final ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
-            // If we are reading body...
-            if (isReadingBody) {
+            // If we have a current message, it means that we are still reading its body
+            if (currentMessage != null) {
+
                 final HttpBodyStream body = currentMessage.getBody();
 
                 // ...append payload to the last request
@@ -46,23 +47,30 @@ public class HttpMessageStreamReader<T extends HttpMessage> implements Closeable
                 if (body.requiresMoreData()) continue;
 
                 // If the body has been fully read, prepare to process the next request
-                isReadingBody = false;
+                hasPendingMessage = false;
                 currentMessage = null;
 
-                // Return before trying to handle a new message
+                // Return before trying to handle a new message, allowing user to call hasPendingMessage()
                 return null;
             }
 
             // Try to read an HTTP header/request
             final T message = headerReader.readMessage(buffer);
-            if (message != null) {
-                isReadingBody = true;
-                return currentMessage = message;
-            }
+            if (headerReader.getBytesRead() != 0) hasPendingMessage = true;
+            if (message != null) return currentMessage = message;
         }
 
         // The buffer was fully consumed
         return null;
+    }
+
+    /**
+     * Returns {@code true} if this reader is currently processing a message.
+     *
+     * @return {@code false} if this reader has no partial message in its buffer
+     */
+    public boolean hasPendingMessage() {
+        return hasPendingMessage;
     }
 
     @Override

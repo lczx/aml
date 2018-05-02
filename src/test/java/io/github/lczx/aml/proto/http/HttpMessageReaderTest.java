@@ -98,9 +98,11 @@ public class HttpMessageReaderTest {
                 new HttpMessageStreamReader<>(new HttpRequestHeaderReader());
 
         int reqIdx = 0;
+        int actReqIdx = 0;
         while (in.read(buffer) != -1) {
             buffer.flip();
             while (buffer.hasRemaining()) {
+                if (!reader.hasPendingMessage()) actReqIdx++; // Increment by 1 if last message is closing
                 final HttpRequest req = reader.readMessage(buffer);
                 if (req != null) handleRequest(reqIdx++, req);
             }
@@ -111,6 +113,7 @@ public class HttpMessageReaderTest {
         exec.shutdown();
         exec.awaitTermination(0, TimeUnit.SECONDS);
 
+        assertEquals(reqIdx, actReqIdx);
         assertEquals(reqIdx, futures.size());
         for (Map.Entry<Future<ContentReaderResult>, String> e : futures.entrySet()) {
             final ContentReaderResult result = e.getKey().get();

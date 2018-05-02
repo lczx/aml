@@ -25,4 +25,6 @@ public interface HttpMessageHeaderReader<T extends HttpMessage> {
 
     T readMessage(ByteBuffer buffer) throws IOException;
 
+    int getBytesRead();
+
 }
