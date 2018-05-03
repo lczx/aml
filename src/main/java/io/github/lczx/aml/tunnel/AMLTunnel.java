@@ -71,8 +71,8 @@ public class AMLTunnel {
         }
     }
 
-    public void startSystem(final SocketProtector socketProtector,
-                            final ParcelFileDescriptor vpnInterface) throws IOException {
+    public void startSystem(final SocketProtector socketProtector, final ParcelFileDescriptor vpnInterface,
+                            final String[] moduleNames) throws IOException {
         this.vpnInterface = vpnInterface;
 
         amlContext = new AMLContextImpl(socketProtector);
@@ -86,8 +86,9 @@ public class AMLTunnel {
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
         moduleManager = new ModuleManager(amlContext);
-        new ReflectiveModuleLoader(moduleManager).addModules(
-                "io.github.lczx.aml.modules.tls.TlsProxy", "io.github.lczx.aml.modules.uid.UidModule");
+        if (moduleNames != null)
+            new ReflectiveModuleLoader(moduleManager).addModules(moduleNames);
+
         moduleManager.startModules();
 
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);

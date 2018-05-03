@@ -37,14 +37,16 @@ public final class AML {
     }
 
     public static void startTunnelService(final Context context) {
-        startTunnelService(context, null);
+        startTunnelService(context, null, null);
     }
 
-    public static void startTunnelService(final Context context, final String[] targetPackageNames) {
+    public static void startTunnelService(final Context context,
+                                          final String[] targetPackageNames, final String[] moduleNames) {
         LOG.debug("Requested service start from {}, targets: {}", context, Arrays.toString(targetPackageNames));
         context.startService(
                 new Intent(AMLTunnelService.ACTION_START, null, context, serviceClass)
-                        .putExtra(AMLTunnelService.EXTRA_TARGET_PACKAGES, targetPackageNames));
+                        .putExtra(AMLTunnelService.EXTRA_TARGET_PACKAGES, targetPackageNames)
+                        .putExtra(AMLTunnelService.EXTRA_MODULE_NAMES, moduleNames));
     }
 
     public static void stopTunnelService(final Context context) {
