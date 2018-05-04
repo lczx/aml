@@ -18,6 +18,7 @@ package io.github.lczx.aml;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import io.github.lczx.aml.tunnel.AMLTunnelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,26 +28,34 @@ import java.util.Arrays;
 public final class AML {
 
     private static final Logger LOG = LoggerFactory.getLogger(AML.class);
+    private static final Bundle modules = new Bundle();
 
     private static Class<? extends AMLTunnelService> serviceClass = AMLTunnelService.class;
 
     private AML() { }
+
+    public static void addModule(final String moduleName) {
+        addModule(moduleName, null);
+    }
+
+    public static void addModule(final String moduleName, final Bundle parameters) {
+        AML.modules.putBundle(moduleName, parameters);
+    }
 
     public static void setServiceClass(final Class<AMLTunnelService> serviceClass) {
         AML.serviceClass = serviceClass;
     }
 
     public static void startTunnelService(final Context context) {
-        startTunnelService(context, null, null);
+        startTunnelService(context, null);
     }
 
-    public static void startTunnelService(final Context context,
-                                          final String[] targetPackageNames, final String[] moduleNames) {
+    public static void startTunnelService(final Context context, final String[] targetPackageNames) {
         LOG.debug("Requested service start from {}, targets: {}", context, Arrays.toString(targetPackageNames));
         context.startService(
                 new Intent(AMLTunnelService.ACTION_START, null, context, serviceClass)
                         .putExtra(AMLTunnelService.EXTRA_TARGET_PACKAGES, targetPackageNames)
-                        .putExtra(AMLTunnelService.EXTRA_MODULE_NAMES, moduleNames));
+                        .putExtra(AMLTunnelService.EXTRA_MODULE_PARAMETERS, modules));
     }
 
     public static void stopTunnelService(final Context context) {
@@ -58,10 +67,6 @@ public final class AML {
     public static boolean isServiceRunning(final Context context) {
         // Since any service class must extend AMLTunnelService, it is no problem referring to it
         return AMLTunnelService.isActive();
-    }
-
-    public static void addStatusListener(/* ... */) {
-        // TODO: Implement
     }
 
 }

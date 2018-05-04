@@ -23,7 +23,6 @@ import eu.faircode.netguard.IPUtil;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.AMLContextImpl;
 import io.github.lczx.aml.hook.ModuleManager;
-import io.github.lczx.aml.hook.ReflectiveModuleLoader;
 import io.github.lczx.aml.hook.monitoring.BaseMeasureKeys;
 import io.github.lczx.aml.hook.monitoring.MeasureHolder;
 import io.github.lczx.aml.hook.monitoring.StatusProbe;
@@ -71,8 +70,7 @@ public class AMLTunnel {
         }
     }
 
-    public void startSystem(final SocketProtector socketProtector, final ParcelFileDescriptor vpnInterface,
-                            final String[] moduleNames) throws IOException {
+    public void initialize(final SocketProtector socketProtector, final ParcelFileDescriptor vpnInterface) {
         this.vpnInterface = vpnInterface;
 
         amlContext = new AMLContextImpl(socketProtector);
@@ -85,26 +83,27 @@ public class AMLTunnel {
         tcpNetworkInterface = new TcpNetworkInterface(amlContext, tcpTxPipe, rxPipe);
         udpNetworkInterface = new UdpNetworkInterface(amlContext, udpTxPipe, rxPipe);
 
-        moduleManager = new ModuleManager(amlContext);
-        if (moduleNames != null)
-            new ReflectiveModuleLoader(moduleManager).addModules(moduleNames);
-
-        moduleManager.startModules();
-
         final IpProtocolDispatcher dispatcher = new IpProtocolDispatcher(tcpTxPipe, udpTxPipe, null);
         vpnThread = new Thread(new TaskRunner("VPN I/O",
                 new TunUplinkReader(vpnInterface.getFileDescriptor(), dispatcher),
                 new TunDownlinkWriter(vpnInterface.getFileDescriptor(), rxPipe)), "tun_vpn");
+
+        moduleManager = new ModuleManager(amlContext);
+    }
+
+    public void startSystem() throws IOException {
+        if (amlContext == null)
+            throw new IllegalStateException("Tunnel not initialized");
+
+        moduleManager.startModules();
 
         try {
             tcpNetworkInterface.start();
             udpNetworkInterface.start();
             vpnThread.start();
         } catch (final IOException e) {
+            cleanup();
             throw new IOException("Selector initialization failed", e);
-            //cleanup();
-            //stopSelf();
-            //return;
         }
     }
 
@@ -120,6 +119,10 @@ public class AMLTunnel {
 
     public AMLContext getAmlContext() {
         return amlContext;
+    }
+
+    public ModuleManager getModuleManager() {
+        return moduleManager;
     }
 
     private void addRoutes(final VpnService.Builder builder) {
