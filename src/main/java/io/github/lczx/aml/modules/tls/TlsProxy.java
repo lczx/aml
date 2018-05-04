@@ -16,42 +16,50 @@
 
 package io.github.lczx.aml.modules.tls;
 
-import android.content.res.AssetManager;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.AMLModule;
 import io.github.lczx.aml.hook.AMLTunnelModule;
+import io.github.lczx.aml.hook.ModuleParameters;
 import io.github.lczx.aml.modules.tls.cert.CredentialsLoader;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
-import io.github.lczx.aml.tunnel.AMLTunnelService;
 import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
 import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @AMLModule(name = "TLS Proxy")
 public class TlsProxy implements AMLTunnelModule {
 
+    public static final String PARAM_CA_CERTIFICATE = "ca_crt";
+    public static final String PARAM_CA_PRIVATE_KEY = "ca_pvk";
+
+    private final ProxyCertificateProvider certificateProvider;
+
     private ProxyServerLoop serverRunnable;
     private Thread serverThread;
+
+    public TlsProxy(final ModuleParameters parameters) {
+        Objects.requireNonNull(parameters, "Module started without params, cannot determine CA credentials");
+        final byte[] certBytes = parameters.getParameter(PARAM_CA_CERTIFICATE);
+        final byte[] keyBytes = parameters.getParameter(PARAM_CA_PRIVATE_KEY);
+        if (certBytes == null || keyBytes == null)
+            throw new IllegalArgumentException("Module initialization failed, no CA credentials provided");
+
+        try {
+            certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
+                    CredentialsLoader.loadCertificateX509(certBytes),
+                    CredentialsLoader.loadPrivateKeyDER(keyBytes)));
+        } catch (final IOException e) {
+            throw new RuntimeException("Malformed credentials parameter", e);
+        }
+    }
 
     @Override
     public void initialize(final AMLContext amlContext) {
         final RouteTable proxyRoutes = new RouteTable(amlContext);
-
-        // TODO: HAAAX (Will probably be no longer required once we generate our own CAs)
-        final AssetManager assetManager = ((AMLTunnelService) amlContext.getSocketProtector()).getAssets();
-
-        final ProxyCertificateProvider certificateProvider;
-        try {
-            certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
-                    CredentialsLoader.loadCertificateX509(assetManager.open("ca.crt")),
-                    CredentialsLoader.loadPrivateKeyDER(assetManager.open("ca.key"))));
-        } catch (final IOException e) {
-            throw new RuntimeException("Cannot load CA credentials from application assets", e);
-        }
-
         serverRunnable = new ProxyServerLoop(proxyRoutes, certificateProvider, amlContext.getSocketProtector());
         serverThread = new Thread(serverRunnable, "pxy_server");
 
