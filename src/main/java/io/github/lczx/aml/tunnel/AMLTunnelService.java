@@ -33,6 +33,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";
     public static final String ACTION_BIND_MONITORING = "aml.tunnel.intent.action.BIND_MONITORING";
     public static final String EXTRA_TARGET_PACKAGES = "aml.tunnel.intent.extra.TARGET_NAMES";
+    public static final String EXTRA_MODULE_NAMES = "aml.tunnel.intent.extra.MODULES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
 
@@ -68,7 +69,8 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
 
         switch (intent.getAction()) {
             case ACTION_START:
-                startVPN(intent.getStringArrayExtra(EXTRA_TARGET_PACKAGES));
+                startVPN(intent.getStringArrayExtra(EXTRA_TARGET_PACKAGES),
+                        intent.getStringArrayExtra(EXTRA_MODULE_NAMES));
                 break;
             case ACTION_STOP:
                 // stopService()/stopSelf() doesn't work and onDestroy() does not get called, the only way to stop
@@ -106,7 +108,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         LOG.debug("Service destroyed");
     }
 
-    private void startVPN(final String[] targetPackages) {
+    private void startVPN(final String[] targetPackages, final String[] moduleNames) {
         final Builder builder = new Builder();
         builder.setSession("firewall");
         amlTunnel.configureInterface(builder, targetPackages);
@@ -121,7 +123,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         }
 
         try {
-            amlTunnel.startSystem(this, vpnInterface);
+            amlTunnel.startSystem(this, vpnInterface, moduleNames);
         } catch (final IOException e) {
             LOG.error("Error while starting AML", e);
             stopSelf();

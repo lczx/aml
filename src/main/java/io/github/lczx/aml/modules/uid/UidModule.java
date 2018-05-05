@@ -21,8 +21,8 @@ import io.github.lczx.aml.hook.AMLEvent;
 import io.github.lczx.aml.hook.AMLEventListener;
 import io.github.lczx.aml.hook.AMLModule;
 import io.github.lczx.aml.hook.AMLTunnelModule;
-import io.github.lczx.aml.tunnel.protocol.Link;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
+import io.github.lczx.aml.tunnel.network.Link;
+import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

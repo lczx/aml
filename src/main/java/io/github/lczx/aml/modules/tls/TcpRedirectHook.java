@@ -18,9 +18,9 @@ package io.github.lczx.aml.modules.tls;
 
 import io.github.lczx.aml.hook.AMLEvent;
 import io.github.lczx.aml.hook.AMLEventListener;
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpCloseConnectionEvent;
-import io.github.lczx.aml.tunnel.protocol.tcp.TcpNewConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
+import io.github.lczx.aml.tunnel.network.tcp.TcpConnection;
+import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ import java.net.InetSocketAddress;
             onClose(((TcpCloseConnectionEvent) event).getConnection());
     }
 
-    private void onConnect(final Connection connection) {
+    private void onConnect(final TcpConnection connection) {
         final InetSocketAddress destination = connection.getLink().destination;
         final int relayPort = connection.getUpstreamChannel().socket().getLocalPort();
 
@@ -58,11 +58,11 @@ import java.net.InetSocketAddress;
             LOG.debug("Intercepted connection from TCP relay port ({}) to HTTPS standard port (443), rerouting " +
                     "destination to proxy ({} becomes {})", relayPort, destination, getProxyAddress());
             routes.addRoute(relayPort, new ProxyConnection(connection, ProxyConnection.Type.HTTPS));
-            connection.putExtra(Connection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
+            connection.putExtra(TcpConnection.EXTRA_DESTINATION_REDIRECT, getProxyAddress());
         }
     }
 
-    private void onClose(final Connection connection) {
+    private void onClose(final TcpConnection connection) {
         routes.removeRoute(connection.getUpstreamChannel().socket().getLocalPort());
     }
 

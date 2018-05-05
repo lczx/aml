@@ -16,42 +16,32 @@
 
 package io.github.lczx.aml.modules.tls;
 
-import io.github.lczx.aml.tunnel.protocol.DataTransferQueue;
-import io.github.lczx.aml.tunnel.protocol.tcp.Connection;
+import io.github.lczx.aml.tunnel.network.Connection;
+import io.github.lczx.aml.tunnel.network.tcp.TcpConnection;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ProxyConnection {
+public class ProxyConnection extends Connection {
 
     public static final String EXTRA_TLS_SERVER_NAME = "tls-sni-server-name";
     public static final String EXTRA_TLS_NEXT_PROTOCOL_NAME = "tls-alpn-next-protocol";
 
-    private final Connection tcpConnection;
+    private final TcpConnection tcpConnection;
     private final Type proxyType;
-    private final DataTransferQueue transmittingQueue = new DataTransferQueue();
-    private final DataTransferQueue receivingQueue = new DataTransferQueue();
     private final Map<String, Object> extra = new HashMap<>();
 
-    public ProxyConnection(final Connection tcpConnection, final Type proxyType) {
+    public ProxyConnection(final TcpConnection tcpConnection, final Type proxyType) {
         this.tcpConnection = tcpConnection;
         this.proxyType = proxyType;
     }
 
-    public Connection getTcpConnection() {
+    public TcpConnection getTcpConnection() {
         return tcpConnection;
     }
 
     public Type getProxyType() {
         return proxyType;
-    }
-
-    public DataTransferQueue getTransmittingQueue() {
-        return transmittingQueue;
-    }
-
-    public DataTransferQueue getReceivingQueue() {
-        return receivingQueue;
     }
 
     @SuppressWarnings("unchecked")

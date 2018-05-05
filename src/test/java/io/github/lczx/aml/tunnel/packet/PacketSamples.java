@@ -16,7 +16,7 @@
 
 package io.github.lczx.aml.tunnel.packet;
 
-class PacketSamples {
+final class PacketSamples {
 
     //Internet Protocol Version 4, Src: 10.0.0.129, Dst: 93.184.216.34
     //    0100 .... = Version: 4
@@ -707,5 +707,7 @@ class PacketSamples {
             SAMPLE_PACKET_01, SAMPLE_PACKET_02, SAMPLE_PACKET_03, SAMPLE_PACKET_04, SAMPLE_PACKET_05, SAMPLE_PACKET_06,
             SAMPLE_PACKET_07, SAMPLE_PACKET_08, SAMPLE_PACKET_09, SAMPLE_PACKET_10, SAMPLE_PACKET_11
     };
+
+    private PacketSamples() { }
 
 }
