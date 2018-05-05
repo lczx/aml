@@ -52,8 +52,9 @@ import java.util.Locale;
 
 public final class CryptoUtils {
 
-    public static final int DEFAULT_RSA_STRENGTH = 1024;
-    public static final X9ECParameters DEFAULT_ECC_PARAMS = // a.k.a. ANSI x9.62 prime256v1 / SEC secp256r1 / NIST P-256
+    /* package */ static final int DEFAULT_RSA_STRENGTH = 1024;
+    /* package */ static final X9ECParameters DEFAULT_ECC_PARAMS =
+            // a.k.a. ANSI x9.62 prime256v1 / SEC secp256r1 / NIST P-256
             //X962NamedCurves.getByOID(X9ObjectIdentifiers.prime256v1);
             SECNamedCurves.getByOID(SECObjectIdentifiers.secp256r1);
 
@@ -73,7 +74,7 @@ public final class CryptoUtils {
         return new SecureRandom(SEED_GEN.generateSeed(20, true));
     }
 
-    public static AsymmetricCipherKeyPair generateRSAKeyPair(final int length) {
+    /* package */ static AsymmetricCipherKeyPair generateRSAKeyPair(final int length) {
         final RSAKeyPairGenerator kpGen = new RSAKeyPairGenerator();
         kpGen.init(new RSAKeyGenerationParameters(RSAKeyGenParameterSpec.F4,
                 createSecureRandom(), length, RSA_CERTAINTY));
@@ -81,7 +82,7 @@ public final class CryptoUtils {
         return kpGen.generateKeyPair();
     }
 
-    public static AsymmetricCipherKeyPair generateECCKeyPair(final X9ECParameters params) throws IOException {
+    /* package */ static AsymmetricCipherKeyPair generateECCKeyPair(final X9ECParameters params) throws IOException {
         // TODO: Solve problems with BC keygen or switch to java.security altogether
 
         /*final ECKeyPairGenerator kpGen = new ECKeyPairGenerator();
@@ -126,7 +127,7 @@ public final class CryptoUtils {
 
         try {
             return new BcRSAContentSignerBuilder(sigAlgId, digAlgId).build(caPrivateKey);
-        } catch (OperatorCreationException e) {
+        } catch (final OperatorCreationException e) {
             throw new RuntimeException("Illegal signer algorithm name: \"" + CA_SIGNER_ALGORITHM_NAME + '"', e);
         }
     }
