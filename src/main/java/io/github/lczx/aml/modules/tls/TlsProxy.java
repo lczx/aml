@@ -20,12 +20,13 @@ import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.AMLModule;
 import io.github.lczx.aml.hook.AMLTunnelModule;
 import io.github.lczx.aml.hook.ModuleParameters;
-import io.github.lczx.aml.modules.tls.cert.CredentialsLoader;
+import io.github.lczx.aml.modules.tls.cert.CredentialsStoreUtils;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
 import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
+import org.spongycastle.crypto.util.PrivateKeyFactory;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -50,8 +51,8 @@ public class TlsProxy implements AMLTunnelModule {
 
         try {
             certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
-                    CredentialsLoader.loadCertificateX509(certBytes),
-                    CredentialsLoader.loadPrivateKeyDER(keyBytes)));
+                    CredentialsStoreUtils.parseX509CertificateDER(certBytes),
+                    PrivateKeyFactory.createKey(CredentialsStoreUtils.parsePKCS8PrivateKeyDER(keyBytes))));
         } catch (final IOException e) {
             throw new RuntimeException("Malformed credentials parameter", e);
         }

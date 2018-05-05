@@ -22,24 +22,29 @@ import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
 import org.spongycastle.asn1.pkcs.RSAPrivateKey;
 import org.spongycastle.asn1.x509.AlgorithmIdentifier;
 import org.spongycastle.cert.X509CertificateHolder;
-import org.spongycastle.crypto.params.AsymmetricKeyParameter;
-import org.spongycastle.crypto.util.PrivateKeyFactory;
 
 import java.io.IOException;
 
-public final class CredentialsLoader {
+public final class CredentialsStoreUtils {
 
-    private CredentialsLoader() { }
-
-    public static X509CertificateHolder loadCertificateX509(final byte[] bytes) throws IOException {
+    public static X509CertificateHolder parseX509CertificateDER(final byte[] bytes) throws IOException {
         return new X509CertificateHolder(bytes);
     }
 
-    public static AsymmetricKeyParameter loadPrivateKeyDER(final byte[] bytes) throws IOException {
-        final PrivateKeyInfo p = new PrivateKeyInfo(
+    public static byte[] dumpX509CertificateDer(final X509CertificateHolder certificate) throws IOException {
+        return certificate.getEncoded();
+    }
+
+    public static PrivateKeyInfo parsePKCS8PrivateKeyDER(final byte[] bytes) throws IOException {
+        return new PrivateKeyInfo(
                 new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, DERNull.INSTANCE),
                 RSAPrivateKey.getInstance(bytes));
-        return PrivateKeyFactory.createKey(p);
     }
+
+    public static byte[] dumpPKCS8PrivateKeyDER(final PrivateKeyInfo privateKey) throws IOException {
+        return privateKey.parsePrivateKey().toASN1Primitive().getEncoded();
+    }
+
+    private CredentialsStoreUtils() { }
 
 }
