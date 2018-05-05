@@ -16,9 +16,11 @@
 
 package io.github.lczx.aml.hook;
 
+import android.os.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 
 public class ReflectiveModuleLoader {
@@ -31,20 +33,16 @@ public class ReflectiveModuleLoader {
         this.moduleManager = moduleManager;
     }
 
-    @SafeVarargs
-    public final void addModules(final Class<? extends AMLTunnelModule>... classes) {
-        for (final Class<? extends AMLTunnelModule> clazz : classes) load(clazz);
+    public void addModules(final Bundle modulesBundle) {
+        for (final String name : modulesBundle.keySet())
+            load(name, modulesBundle.getBundle(name));
     }
 
-    public void addModules(final String... classNames) {
-        for (final String name : classNames) load(name);
-    }
-
-    private void load(final String moduleClassName) {
+    private void load(final String moduleClassName, final Bundle parameters) {
         try {
             final Class<?> moduleClass = Class.forName(moduleClassName);
             if (Arrays.asList(moduleClass.getInterfaces()).contains(AMLTunnelModule.class))
-                load(moduleClass);
+                load(moduleClass, parameters);
             else
                 LOG.error("Module \"{}\" does not implement AMLTunnelModule and will not be loaded");
         } catch (final ClassNotFoundException e) {
@@ -52,7 +50,7 @@ public class ReflectiveModuleLoader {
         }
     }
 
-    private void load(final Class<?> moduleClass) {
+    private void load(final Class<?> moduleClass, final Bundle parameters) {
         final AMLModule ann = moduleClass.getAnnotation(AMLModule.class);
         if (ann == null) {
             LOG.error("Module \"{}\" is not annotated with @AMLModule and will not be loaded", moduleClass.getName());
@@ -60,9 +58,42 @@ public class ReflectiveModuleLoader {
         }
 
         try {
-            moduleManager.addModule(ann.name(), (AMLTunnelModule) moduleClass.newInstance(), ann.priority());
+            moduleManager.addModule(ann.name(), initModule(moduleClass, parameters), ann.priority());
+        } catch (final NoSuchMethodException e) {
+            LOG.error("Module \"" + moduleClass.getName() + "\" has parameters but no matching constructor was found");
         } catch (final ReflectiveOperationException e) {
             LOG.error("Module \"" + moduleClass.getName() + "\" can not be instantiated", e);
+        }
+    }
+
+    private AMLTunnelModule initModule(final Class<?> moduleClass, final Bundle parameters)
+            throws ReflectiveOperationException {
+        try {
+            // Try to get the parameterized constructor
+            final Constructor<?> constructor = moduleClass.getConstructor(ModuleParameters.class);
+            return (AMLTunnelModule) constructor.newInstance(new ModuleParametersBundle(parameters));
+        } catch (final NoSuchMethodException e) {
+            // If not found, and we have no parameters, try with the default constructor
+            if (parameters == null) {
+                return (AMLTunnelModule) moduleClass.newInstance();
+            } else {
+                // We have parameters but no appropriate constructor, throw
+                throw e;
+            }
+        }
+    }
+
+    private class ModuleParametersBundle implements ModuleParameters {
+        private final Bundle bundle;
+
+        private ModuleParametersBundle(final Bundle bundle) {
+            this.bundle = bundle;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T getParameter(final String name) {
+            return (T) bundle.get(name);
         }
     }
 

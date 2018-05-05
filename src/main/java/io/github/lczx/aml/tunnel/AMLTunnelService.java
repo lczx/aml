@@ -19,9 +19,11 @@ package io.github.lczx.aml.tunnel;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import io.github.lczx.aml.AMLContext;
+import io.github.lczx.aml.hook.ReflectiveModuleLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +35,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";
     public static final String ACTION_BIND_MONITORING = "aml.tunnel.intent.action.BIND_MONITORING";
     public static final String EXTRA_TARGET_PACKAGES = "aml.tunnel.intent.extra.TARGET_NAMES";
-    public static final String EXTRA_MODULE_NAMES = "aml.tunnel.intent.extra.MODULES";
+    public static final String EXTRA_MODULE_PARAMETERS = "aml.tunnel.intent.extra.MODULES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
 
@@ -70,7 +72,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         switch (intent.getAction()) {
             case ACTION_START:
                 startVPN(intent.getStringArrayExtra(EXTRA_TARGET_PACKAGES),
-                        intent.getStringArrayExtra(EXTRA_MODULE_NAMES));
+                        intent.getBundleExtra(EXTRA_MODULE_PARAMETERS));
                 break;
             case ACTION_STOP:
                 // stopService()/stopSelf() doesn't work and onDestroy() does not get called, the only way to stop
@@ -108,7 +110,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         LOG.debug("Service destroyed");
     }
 
-    private void startVPN(final String[] targetPackages, final String[] moduleNames) {
+    private void startVPN(final String[] targetPackages, final Bundle moduleBundle) {
         final Builder builder = new Builder();
         builder.setSession("firewall");
         amlTunnel.configureInterface(builder, targetPackages);
@@ -123,7 +125,10 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
         }
 
         try {
-            amlTunnel.startSystem(this, vpnInterface, moduleNames);
+            amlTunnel.initialize(this, vpnInterface);
+            if (moduleBundle != null)
+                new ReflectiveModuleLoader(amlTunnel.getModuleManager()).addModules(moduleBundle);
+            amlTunnel.startSystem();
         } catch (final IOException e) {
             LOG.error("Error while starting AML", e);
             stopSelf();
