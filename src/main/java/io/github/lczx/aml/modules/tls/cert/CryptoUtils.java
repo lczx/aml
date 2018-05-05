@@ -21,21 +21,34 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
 import org.spongycastle.asn1.sec.SECNamedCurves;
 import org.spongycastle.asn1.sec.SECObjectIdentifiers;
+import org.spongycastle.asn1.x500.X500Name;
+import org.spongycastle.asn1.x509.AlgorithmIdentifier;
 import org.spongycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.spongycastle.asn1.x9.X9ECParameters;
+import org.spongycastle.cert.X509v3CertificateBuilder;
 import org.spongycastle.crypto.AsymmetricCipherKeyPair;
 import org.spongycastle.crypto.generators.RSAKeyPairGenerator;
+import org.spongycastle.crypto.params.AsymmetricKeyParameter;
 import org.spongycastle.crypto.params.RSAKeyGenerationParameters;
 import org.spongycastle.crypto.prng.ThreadedSeedGenerator;
 import org.spongycastle.crypto.util.PrivateKeyFactory;
 import org.spongycastle.crypto.util.PublicKeyFactory;
+import org.spongycastle.crypto.util.SubjectPublicKeyInfoFactory;
+import org.spongycastle.operator.ContentSigner;
+import org.spongycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
+import org.spongycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
+import org.spongycastle.operator.OperatorCreationException;
+import org.spongycastle.operator.bc.BcRSAContentSignerBuilder;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.RSAKeyGenParameterSpec;
+import java.util.Date;
+import java.util.Locale;
 
 public final class CryptoUtils {
 
@@ -46,6 +59,8 @@ public final class CryptoUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
     private static final ThreadedSeedGenerator SEED_GEN = new ThreadedSeedGenerator();
+    private static final String CA_SIGNER_ALGORITHM_NAME = "SHA256WithRSAEncryption"; // Since the CA has RSA keys
+    private static final long ONE_DAY_MS = 86400000L; // 24 * 3600 * 1000
 
     // % of certainty that the generated primes are actually prime numbers,
     // use a low value to generate keys faster since we don't need strong ones
@@ -88,6 +103,32 @@ public final class CryptoUtils {
         return new AsymmetricCipherKeyPair(
                 PublicKeyFactory.createKey(SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded())),
                 PrivateKeyFactory.createKey(PrivateKeyInfo.getInstance(kp.getPrivate().getEncoded())));
+    }
+
+    /* package */ static X509v3CertificateBuilder createDefaultCertificateBuilder(
+            final X500Name issuer, final X500Name subject, final AsymmetricKeyParameter subjPubKey) throws IOException {
+        final long now = System.currentTimeMillis();
+        return new X509v3CertificateBuilder(
+                issuer,
+                BigInteger.valueOf(now),
+                new Date(now - 30 * ONE_DAY_MS),
+                new Date(now + 335 * ONE_DAY_MS),
+                Locale.ENGLISH,
+                subject,
+                SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(subjPubKey));
+    }
+
+    /* package */ static ContentSigner createDefaultCASigner(final AsymmetricKeyParameter caPrivateKey) {
+        final AlgorithmIdentifier sigAlgId =
+                new DefaultSignatureAlgorithmIdentifierFinder().find(CA_SIGNER_ALGORITHM_NAME);
+        final AlgorithmIdentifier digAlgId =
+                new DefaultDigestAlgorithmIdentifierFinder().find(sigAlgId);
+
+        try {
+            return new BcRSAContentSignerBuilder(sigAlgId, digAlgId).build(caPrivateKey);
+        } catch (OperatorCreationException e) {
+            throw new RuntimeException("Illegal signer algorithm name: \"" + CA_SIGNER_ALGORITHM_NAME + '"', e);
+        }
     }
 
 }
