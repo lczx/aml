@@ -18,11 +18,11 @@ package io.github.lczx.aml.proto.http.stream;
 
 import java.nio.ByteBuffer;
 
-public class KnownSizeBodyStream extends AbstractBodyStream {
+public class SizedBodyStream extends AbstractBodyStream {
 
     private long remaining;
 
-    public KnownSizeBodyStream(final long size) {
+    public SizedBodyStream(final long size) {
         super(size);
         this.remaining = size;
     }

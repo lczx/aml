@@ -46,7 +46,7 @@ public class HttpResponse extends AbstractHttpMessage<HttpResponseHeader> {
         // If Content-Length is present, use that to determine the stream
         final String contentLength = header.getField(HttpHeader.FIELD_CONTENT_LENGTH);
         if (contentLength != null)
-            return new KnownSizeBodyStream(Long.parseLong(contentLength));
+            return new SizedBodyStream(Long.parseLong(contentLength));
 
         // Otherwise size it is determined by the server closing the connection
         return new UndeterminedBodyStream();

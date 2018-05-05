@@ -42,7 +42,7 @@ public class HttpRequest extends AbstractHttpMessage<HttpRequestHeader> {
 
         final String contentLength = header.getField(HttpHeader.FIELD_CONTENT_LENGTH);
         if (contentLength != null)
-            return new KnownSizeBodyStream(Long.parseLong(contentLength));
+            return new SizedBodyStream(Long.parseLong(contentLength));
 
         // This shouldn't happen
         return new UndeterminedBodyStream();
