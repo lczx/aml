@@ -61,7 +61,7 @@ public class TlsProxy implements AMLTunnelModule {
     @Override
     public void initialize(final AMLContext amlContext) {
         final RouteTable proxyRoutes = new RouteTable(amlContext);
-        serverRunnable = new ProxyServerLoop(proxyRoutes, certificateProvider, amlContext.getSocketProtector());
+        serverRunnable = new ProxyServerLoop(amlContext, proxyRoutes, certificateProvider);
         serverThread = new Thread(serverRunnable, "pxy_server");
 
         amlContext.getEventDispatcher().addEventListener(new TcpRedirectHook(proxyRoutes, serverRunnable),

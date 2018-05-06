@@ -16,9 +16,9 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.tunnel.IOUtils;
-import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,17 +31,17 @@ import java.net.SocketException;
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyServerLoop.class);
 
+    private final AMLContext amlContext;
     private final RouteTable routeTable;
     private final ProxyCertificateProvider certProvider;
-    private final SocketProtector socketProtector;
 
     private ServerSocket serverSocket;
 
-    /* package */ ProxyServerLoop(final RouteTable routes, final ProxyCertificateProvider certProvider,
-                    final SocketProtector socketProtector) {
+    /* package */ ProxyServerLoop(final AMLContext amlContext, final RouteTable routes,
+                                  final ProxyCertificateProvider certProvider) {
+        this.amlContext= amlContext;
         this.routeTable = routes;
         this.certProvider = certProvider;
-        this.socketProtector = socketProtector;
     }
 
     @Override
@@ -91,7 +91,7 @@ import java.net.SocketException;
             case HTTPS:
                 LOG.debug("New connection from port {}, original destination {}, type HTTPS",
                         socket.getPort(), route.getTcpConnection().getLink().destination);
-                connThread = new Thread(new HttpsProxyConnectionHandler(route, socket, certProvider, socketProtector),
+                connThread = new Thread(new HttpsProxyConnectionHandler(amlContext, route, socket, certProvider),
                         "pxy_conn" + socket.getPort());
                 break;
 

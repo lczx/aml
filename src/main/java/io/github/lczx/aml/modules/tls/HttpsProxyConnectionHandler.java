@@ -16,13 +16,13 @@
 
 package io.github.lczx.aml.modules.tls;
 
+import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.modules.tls.cert.CryptoUtils;
 import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
 import io.github.lczx.aml.modules.tls.proxy.ClientParameters;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsClient;
 import io.github.lczx.aml.modules.tls.proxy.ProxyTlsServer;
 import io.github.lczx.aml.modules.tls.proxy.ServerParameters;
-import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.tls.TlsClientProtocol;
@@ -40,21 +40,20 @@ import java.security.SecureRandom;
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpsProxyConnectionHandler.class);
 
+    private final AMLContext amlContext;
     private final ProxyConnection proxyConnection;
     private final ProxyCertificateProvider certificateProvider;
-    private final SocketProtector socketProtector;
     private final Socket downstreamSocket;
 
     private TlsServerProtocol downstreamTunnel;
     private TlsClientProtocol upstreamTunnel;
 
-    /* package */ HttpsProxyConnectionHandler(final ProxyConnection proxyConnection, final Socket acceptedSocket,
-                                              final ProxyCertificateProvider certProvider,
-                                              final SocketProtector socketProtector) {
+    /* package */ HttpsProxyConnectionHandler(final AMLContext amlContext, final ProxyConnection proxyConnection,
+                                              final Socket acceptedSock, final ProxyCertificateProvider certProvider) {
+        this.amlContext = amlContext;
         this.proxyConnection = proxyConnection;
-        this.downstreamSocket = acceptedSocket;
+        this.downstreamSocket = acceptedSock;
         this.certificateProvider = certProvider;
-        this.socketProtector = socketProtector;
     }
 
     @Override
@@ -65,6 +64,8 @@ import java.security.SecureRandom;
                     CryptoUtils.createSecureRandom());
             LOG.debug("Starting downstream TLS server side ({}) on socket {}", downstreamTunnel, downstreamSocket);
             downstreamTunnel.accept(new ProxyTlsServer(certificateProvider));
+
+            amlContext.getEventDispatcher().sendEvent(new ProxyTlsConnectedEvent(proxyConnection));
 
             // Create pipes to transfer data up and down
             LOG.debug("Handshake on socket {} complete, starting I/O pipes", downstreamSocket);
@@ -86,6 +87,9 @@ import java.security.SecureRandom;
 
     private void onClientHelloReceived(final TlsServer tlsServer,
                                        final ClientParameters clientParameters) throws IOException {
+        amlContext.getEventDispatcher().sendEvent(
+                new ProxyTlsClientParametersEvent(proxyConnection, clientParameters));
+
         final InetSocketAddress destinationSockAddress = proxyConnection.getTcpConnection().getLink().destination;
 
         final String sniName = TlsProxyUtils.getServerName(clientParameters.extensions);
@@ -95,7 +99,7 @@ import java.security.SecureRandom;
         LOG.debug("Received TLS Client Hello (server: {}, params: {}), connecting upstream to {}",
                 downstreamTunnel, clientParameters, destinationSockAddress);
         final Socket upstreamSocket = new Socket(destinationSockAddress.getAddress(), destinationSockAddress.getPort());
-        socketProtector.protect(upstreamSocket);
+        amlContext.getSocketProtector().protect(upstreamSocket);
 
         final ProxyTlsClient tlsClient = new ProxyTlsClient(clientParameters);
         upstreamTunnel = new TlsClientProtocol(
@@ -103,6 +107,8 @@ import java.security.SecureRandom;
         upstreamTunnel.connect(tlsClient);
 
         final ServerParameters serverParams = tlsClient.makeServerParameters();
+        amlContext.getEventDispatcher().sendEvent(
+                new ProxyTlsServerParametersEvent(proxyConnection, serverParams));
         LOG.debug("Upstream connection established emulating downstream client parameters, " +
                         "using upstream Server Hello response to answer downstream (dSrv: {}, uSrv: {}, params: {}",
                 downstreamTunnel, upstreamTunnel, serverParams);
