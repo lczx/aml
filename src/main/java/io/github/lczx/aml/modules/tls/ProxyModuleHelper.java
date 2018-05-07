@@ -126,7 +126,7 @@ public final class ProxyModuleHelper {
         caPrivateKey = toPrivateKeyInfo(ca.privateKey);
     }
 
-    public static Intent createInstallIntent(final String alias) throws IOException {
+    public static Intent createInstallIntent(final CharSequence alias) throws IOException {
         return KeyChain.createInstallIntent()
                 .putExtra(KeyChain.EXTRA_NAME, alias)
                 .putExtra(KeyChain.EXTRA_CERTIFICATE, CredentialsStoreUtils.dumpX509CertificateDer(caCertificate));
