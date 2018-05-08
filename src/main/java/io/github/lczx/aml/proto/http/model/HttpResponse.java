@@ -30,6 +30,10 @@ public class HttpResponse extends AbstractHttpMessage<HttpResponseHeader> {
         this.requestHeader = requestHeader;
     }
 
+    public HttpRequestHeader getRequestHeader() {
+        return requestHeader;
+    }
+
     @Override
     protected HttpBodyStream createBodyStream() {
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
