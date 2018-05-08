@@ -40,8 +40,12 @@ public class ChunkedBodyStream extends AbstractBodyStream {
     public synchronized void appendPayload(final ByteBuffer payload) {
         if (chunkRemaining == STATE_START_OF_CHUNK) {
             // We are expecting a chunk-size element + optional (ignored) extension
-            final String line = headerReader.getLineReader().readLine(payload);
+            String line = headerReader.getLineReader().readLine(payload);
             if (line == null) return;
+
+            // Ignore chunk extensions if present
+            final int extStart = line.indexOf(';');
+            if (extStart != -1) line = line.substring(0, extStart);
             final int chunkSize = Integer.parseInt(line, 16);
 
             if (chunkSize > 0) {
