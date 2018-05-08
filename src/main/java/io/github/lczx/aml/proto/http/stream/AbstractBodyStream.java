@@ -81,6 +81,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
                 // We have no more space for payload in our buffer,
                 // at this point it will probably get never requested so we discard it and do not write more data
                 LOG.info("Internal buffer size exceeded {} bytes without reading, dropping stream", buffer.capacity());
+                payload.position(payload.position() + toRead - actuallyRead);
                 buffer = null;
             }
         } else {
