@@ -71,10 +71,10 @@ public class RingBuffer {
     public synchronized int get() {
         if (avail == 0) return -1;
 
-        byte value = buffer[ri];
+        final byte value = buffer[ri];
         ri = (ri + 1) % buffer.length;
         avail--;
-        return value;
+        return value & 0xFF;
     }
 
     /**
