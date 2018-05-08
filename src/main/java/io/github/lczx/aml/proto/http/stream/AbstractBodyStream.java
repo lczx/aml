@@ -16,6 +16,9 @@
 
 package io.github.lczx.aml.proto.http.stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -24,6 +27,8 @@ import java.nio.channels.ReadableByteChannel;
 public abstract class AbstractBodyStream implements HttpBodyStream {
 
     public static final int DEFAULT_BUFFER_SIZE = 8192;
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractBodyStream.class);
 
     private InputStream bodyStream;
     private ReadableByteChannel bodyChannel;
@@ -75,6 +80,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
             if (toRead != actuallyRead) {
                 // We have no more space for payload in our buffer,
                 // at this point it will probably get never requested so we discard it and do not write more data
+                LOG.info("Internal buffer size exceeded {} bytes without reading, dropping stream", buffer.capacity());
                 buffer = null;
             }
         } else {

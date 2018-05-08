@@ -67,7 +67,7 @@ public class ChunkedBodyStream extends AbstractBodyStream {
             final String line = headerReader.getLineReader().readLine(payload);
             if (line == null) return;
             if (!line.isEmpty())
-                throw new IllegalStateException("Expected CRLF at the end of chunk");
+                throw new IllegalStateException("Expected CRLF at the end of chunk, got \"" + line + '"');
             chunkRemaining = STATE_START_OF_CHUNK;
         }
 

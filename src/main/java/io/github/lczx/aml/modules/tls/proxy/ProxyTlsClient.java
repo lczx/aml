@@ -67,7 +67,8 @@ public class ProxyTlsClient extends TlsClientBase {
     @Override
     public int[] getCipherSuites() {
         final int[] suites = TlsProxyPolicy.applyUplinkCipherSuitePolicy(clientParameters.cipherSuites);
-        LOG.debug("Offered cipher suites {} out of {}",
+        LOG.debug("Offered {} out of {} cipher suites ({} instead of {})",
+                suites.length, clientParameters.cipherSuites.length,
                 Arrays.toString(suites), Arrays.toString(clientParameters.cipherSuites));
         return suites;
     }
