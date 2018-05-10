@@ -34,6 +34,8 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
     private ReadableByteChannel bodyChannel;
     private boolean truncated = false;
 
+    private int bufferSize;
+    private boolean startedWriting = false;
     protected RingBuffer buffer;
 
     public AbstractBodyStream() {
@@ -41,7 +43,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
     }
 
     public AbstractBodyStream(final long expectedDataLength) {
-        buffer = new RingBuffer(Math.min((int) expectedDataLength, DEFAULT_BUFFER_SIZE));
+        bufferSize = Math.min((int) expectedDataLength, DEFAULT_BUFFER_SIZE);
     }
 
     @Override
@@ -67,12 +69,30 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
         return bodyChannel;
     }
 
+    @Override
+    public void resizeBuffer(final int newSize) {
+        bufferSize = newSize;
+        if (buffer != null) {
+            buffer.resize(newSize);
+            LOG.debug("Buffer resized (as requested) to {} bytes - reallocated");
+        } else {
+            LOG.debug("Buffer resized (as requested) to {} bytes - no reallocation needed" +
+                    " (still no data or stream dropped)", newSize);
+        }
+    }
+
     protected abstract boolean wantsMoreData();
 
     protected abstract boolean isStreamClosed();
 
     protected synchronized int putData(final long remaining, final ByteBuffer payload) {
         final int toRead = (int) Math.min(payload.remaining(), remaining);
+        if (toRead == 0) return 0;
+
+        if (!startedWriting) {
+            buffer = new RingBuffer(bufferSize);
+            startedWriting = true;
+        }
 
         // Write data to our temporary buffer if we have it
         if (buffer != null) {
@@ -92,18 +112,26 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
         return toRead;
     }
 
+    private boolean isStreamDropped() {
+        return startedWriting && buffer == null;
+    }
+
+    private void checkStreamDropped() throws IOException {
+        if (isStreamDropped()) throw new IOException("Stream dropped because cache was filled");
+    }
+
     private int getAvailableDataSize() throws IOException {
-        if (buffer == null) throw new IOException("Stream dropped because cache was filled");
+        checkStreamDropped();
         if (isStreamClosed()) return -1;
 
-        return buffer.available();
+        return startedWriting ? buffer.available() : 0;
     }
 
     private boolean blockRead() throws IOException {
-        if (buffer == null) throw new IOException("Stream dropped because cache was filled");
+        checkStreamDropped();
         if (isStreamClosed()) return true;
         waitForData();
-        if (buffer == null) throw new IOException("Stream dropped because cache was filled");
+        checkStreamDropped();
         if (isStreamClosed()) return true;
         return false;
     }
@@ -138,7 +166,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
 
         @Override
         public long skip(final long n) throws IOException {
-            if (buffer == null) throw new IOException("Stream dropped because cache was filled");
+            checkStreamDropped();
             return buffer.skip((int) n);
         }
 
@@ -159,7 +187,7 @@ public abstract class AbstractBodyStream implements HttpBodyStream {
 
         @Override
         public boolean isOpen() {
-            if (buffer == null) return false;
+            if (isStreamDropped()) return false;
             return !isStreamClosed();
         }
 
