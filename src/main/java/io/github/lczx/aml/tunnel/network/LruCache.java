@@ -32,7 +32,7 @@ public class LruCache<K, V> extends LinkedHashMap<K, V> {
     @Override
     protected boolean removeEldestEntry(Entry<K, V> eldest) {
         if (size() <= maxSize) return false;
-        removeCallback.onRemove(eldest);
+        if (removeCallback != null) removeCallback.onRemove(eldest);
         return true;
     }
 
