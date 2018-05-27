@@ -40,6 +40,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Reference lifecycle of AML components: this class orchestrates and binds AML tunnel components together.
+ */
 public class AMLTunnel {
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnel.class);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.lczx.aml.tunnel;
+package io.github.lczx.aml;
 
 import android.content.Intent;
 import android.net.VpnService;
@@ -22,13 +22,21 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
-import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.ReflectiveModuleLoader;
+import io.github.lczx.aml.tunnel.AMLTunnel;
+import io.github.lczx.aml.tunnel.SocketProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+/**
+ * Reference AML's {@link VpnService}.
+ *
+ * <p> Supports actions to start and stop the service plus binding for system monitoring. In addition,
+ * {@link AMLServiceController} can be used as an helper to construct properly formatted intents to interact
+ * with this service.
+ */
 public class AMLTunnelService extends VpnService implements SocketProtector {
 
     public static final String ACTION_START = "aml.tunnel.intent.action.SERVICE_START";
@@ -38,6 +46,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     public static final String EXTRA_MODULE_PARAMETERS = "aml.tunnel.intent.extra.MODULES";
 
     private static final Logger LOG = LoggerFactory.getLogger(AMLTunnelService.class);
+    private static final String SESSION_NAME = "firewall";
 
     private static boolean isActive = false;
 
@@ -74,12 +83,14 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
                 startVPN(intent.getStringArrayExtra(EXTRA_TARGET_PACKAGES),
                         intent.getBundleExtra(EXTRA_MODULE_PARAMETERS));
                 break;
+
             case ACTION_STOP:
                 // stopService()/stopSelf() doesn't work and onDestroy() does not get called, the only way to stop
                 // the tunnel is to close the tunnel device, then we can call stopSelf() and terminate
                 amlTunnel.stopSystem();
                 stopSelf();
                 break;
+
             default:
                 LOG.warn("Service received an unknown action command");
                 return START_NOT_STICKY;
@@ -111,10 +122,12 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
     }
 
     private void startVPN(final String[] targetPackages, final Bundle moduleBundle) {
+        // Create and configure a new VpnService.Builder
         final Builder builder = new Builder();
-        builder.setSession("firewall");
+        builder.setSession(SESSION_NAME);
         amlTunnel.configureInterface(builder, targetPackages);
 
+        // Create the VPN interface
         final ParcelFileDescriptor vpnInterface;
         try {
             vpnInterface = builder.establish();
@@ -124,6 +137,7 @@ public class AMLTunnelService extends VpnService implements SocketProtector {
             return;
         }
 
+        // Initialize AML and load modules
         try {
             amlTunnel.initialize(this, vpnInterface);
             if (moduleBundle != null)
