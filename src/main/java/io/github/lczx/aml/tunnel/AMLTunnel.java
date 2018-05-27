@@ -73,10 +73,10 @@ public class AMLTunnel {
         }
     }
 
-    public void initialize(final SocketProtector socketProtector, final ParcelFileDescriptor vpnInterface) {
+    public void initialize(final VpnService vpnService, final ParcelFileDescriptor vpnInterface) {
         this.vpnInterface = vpnInterface;
 
-        amlContext = new AMLContextImpl(socketProtector);
+        amlContext = new AMLContextImpl(vpnService);
         amlContext.getStatusMonitor().attachProbe(new ServiceProbe());
 
         tcpTxPipe = new ConcurrentPacketConnector();

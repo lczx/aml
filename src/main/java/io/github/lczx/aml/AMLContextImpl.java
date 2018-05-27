@@ -16,18 +16,24 @@
 
 package io.github.lczx.aml;
 
+import android.content.Context;
+import android.net.VpnService;
 import io.github.lczx.aml.hook.EventDispatcher;
 import io.github.lczx.aml.hook.monitoring.StatusMonitor;
 import io.github.lczx.aml.tunnel.SocketProtector;
 
+import java.net.DatagramSocket;
+import java.net.Socket;
+
 public class AMLContextImpl implements AMLContext {
 
-    private final SocketProtector socketProtector;
+    private final VpnService vpnService;
+    private final SocketProtector socketProtector = new SockPr();
     private final StatusMonitor statusMonitor = new StatusMonitor();
     private final EventDispatcher eventDispatcher = new EventDispatcher();
 
-    public AMLContextImpl(final SocketProtector socketProtector) {
-        this.socketProtector = socketProtector;
+    public AMLContextImpl(final VpnService vpnService) {
+        this.vpnService = vpnService;
     }
 
     @Override
@@ -43,6 +49,23 @@ public class AMLContextImpl implements AMLContext {
     @Override
     public EventDispatcher getEventDispatcher() {
         return eventDispatcher;
+    }
+
+    @Override
+    public Context getServiceContext() {
+        return vpnService;
+    }
+
+    private class SockPr implements SocketProtector {
+        @Override
+        public boolean protect(final Socket socket) {
+            return vpnService.protect(socket);
+        }
+
+        @Override
+        public boolean protect(final DatagramSocket datagramSocket) {
+            return vpnService.protect(datagramSocket);
+        }
     }
 
 }

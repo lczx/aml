@@ -37,7 +37,7 @@ import java.io.IOException;
  * {@link AMLServiceController} can be used as an helper to construct properly formatted intents to interact
  * with this service.
  */
-public class AMLTunnelService extends VpnService implements SocketProtector {
+public class AMLTunnelService extends VpnService {
 
     public static final String ACTION_START = "aml.tunnel.intent.action.SERVICE_START";
     public static final String ACTION_STOP = "aml.tunnel.intent.action.SERVICE_STOP";

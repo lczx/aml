@@ -16,6 +16,7 @@
 
 package io.github.lczx.aml.tunnel.network;
 
+import android.content.Context;
 import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.EventDispatcher;
 import io.github.lczx.aml.hook.monitoring.StatusMonitor;
@@ -90,6 +91,11 @@ public final class ProtocolTestUtils {
         @Override
         public EventDispatcher getEventDispatcher() {
             return eventDispatcher;
+        }
+
+        @Override
+        public Context getServiceContext() {
+            return null;
         }
 
     }
