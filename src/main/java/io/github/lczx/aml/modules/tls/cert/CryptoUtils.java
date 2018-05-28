@@ -18,21 +18,18 @@ package io.github.lczx.aml.modules.tls.cert;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
-import org.spongycastle.asn1.sec.SECNamedCurves;
-import org.spongycastle.asn1.sec.SECObjectIdentifiers;
+import org.spongycastle.asn1.ASN1ObjectIdentifier;
 import org.spongycastle.asn1.x500.X500Name;
 import org.spongycastle.asn1.x509.AlgorithmIdentifier;
-import org.spongycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.spongycastle.asn1.x9.ECNamedCurveTable;
 import org.spongycastle.asn1.x9.X9ECParameters;
+import org.spongycastle.asn1.x9.X9ObjectIdentifiers;
 import org.spongycastle.cert.X509v3CertificateBuilder;
 import org.spongycastle.crypto.AsymmetricCipherKeyPair;
+import org.spongycastle.crypto.generators.ECKeyPairGenerator;
 import org.spongycastle.crypto.generators.RSAKeyPairGenerator;
-import org.spongycastle.crypto.params.AsymmetricKeyParameter;
-import org.spongycastle.crypto.params.RSAKeyGenerationParameters;
+import org.spongycastle.crypto.params.*;
 import org.spongycastle.crypto.prng.ThreadedSeedGenerator;
-import org.spongycastle.crypto.util.PrivateKeyFactory;
-import org.spongycastle.crypto.util.PublicKeyFactory;
 import org.spongycastle.crypto.util.SubjectPublicKeyInfoFactory;
 import org.spongycastle.operator.ContentSigner;
 import org.spongycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
@@ -42,9 +39,6 @@ import org.spongycastle.operator.bc.BcRSAContentSignerBuilder;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.Date;
@@ -53,10 +47,8 @@ import java.util.Locale;
 public final class CryptoUtils {
 
     /* package */ static final int DEFAULT_RSA_STRENGTH = 1024;
-    /* package */ static final X9ECParameters DEFAULT_ECC_PARAMS =
+    /* package */ static final ASN1ObjectIdentifier DEFAULT_ECC_PARAMS = X9ObjectIdentifiers.prime256v1;
             // a.k.a. ANSI x9.62 prime256v1 / SEC secp256r1 / NIST P-256
-            //X962NamedCurves.getByOID(X9ObjectIdentifiers.prime256v1);
-            SECNamedCurves.getByOID(SECObjectIdentifiers.secp256r1);
 
     private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
     private static final ThreadedSeedGenerator SEED_GEN = new ThreadedSeedGenerator();
@@ -82,28 +74,13 @@ public final class CryptoUtils {
         return kpGen.generateKeyPair();
     }
 
-    /* package */ static AsymmetricCipherKeyPair generateECCKeyPair(final X9ECParameters params) throws IOException {
-        // TODO: Solve problems with BC keygen or switch to java.security altogether
-
-        /*final ECKeyPairGenerator kpGen = new ECKeyPairGenerator();
-        final ECDomainParameters ecParams = new ECDomainParameters(
-                params.getCurve(), params.getG(), params.getN(), params.getH());
-        kpGen.init(new ECKeyGenerationParameters(ecParams, createSecureRandom()));
-        LOG.debug("Generating new EC key pair, params: {}" + params);
-        return kpGen.generateKeyPair();*/
-
-        final KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("EC");
-            kpg.initialize(256, CryptoUtils.createSecureRandom());
-        } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        final KeyPair kp = kpg.generateKeyPair();
-
-        return new AsymmetricCipherKeyPair(
-                PublicKeyFactory.createKey(SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded())),
-                PrivateKeyFactory.createKey(PrivateKeyInfo.getInstance(kp.getPrivate().getEncoded())));
+    /* package */ static AsymmetricCipherKeyPair generateECCKeyPair(final ASN1ObjectIdentifier curveOid) {
+        final ECKeyPairGenerator kpGen = new ECKeyPairGenerator();
+        final X9ECParameters x9 = ECNamedCurveTable.getByOID(curveOid);
+        kpGen.init(new ECKeyGenerationParameters(new ECNamedDomainParameters(curveOid,
+                x9.getCurve(), x9.getG(), x9.getN(), x9.getH(), x9.getSeed()), createSecureRandom()));
+        LOG.debug("Generating new EC key pair, curve: {}", curveOid);
+        return kpGen.generateKeyPair();
     }
 
     /* package */ static X509v3CertificateBuilder createDefaultCertificateBuilder(
