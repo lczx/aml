@@ -54,7 +54,7 @@ public class ProxyCertificateBuilder implements ProxyCertificateProvider {
         builder.copyAndAddExtension(Extension.subjectAlternativeName, false, originalCertificate);
         final X509CertificateHolder newCertificate = builder.build(CryptoUtils.createDefaultCASigner(caKey));
 
-        LOG.debug("Forged certificate from {}, algorithm ID: {}", originalCertificate, signatureAlgorithm);
+        LOG.debug("Forged certificate type {} for \"{}\"", signatureAlgorithm, originalCertificate.getSubject());
 
         /* // TO COMPARE ORIGINAL AND NEW ONE
         try {
