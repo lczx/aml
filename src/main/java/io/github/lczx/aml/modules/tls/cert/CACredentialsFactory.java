@@ -16,15 +16,10 @@
 
 package io.github.lczx.aml.modules.tls.cert;
 
-import org.spongycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
-import org.spongycastle.asn1.pkcs.RSAPrivateKey;
 import org.spongycastle.asn1.x500.X500Name;
 import org.spongycastle.asn1.x509.*;
 import org.spongycastle.cert.X509v3CertificateBuilder;
 import org.spongycastle.crypto.AsymmetricCipherKeyPair;
-import org.spongycastle.crypto.params.AsymmetricKeyParameter;
-import org.spongycastle.crypto.params.RSAPrivateCrtKeyParameters;
 
 import java.io.IOException;
 
@@ -46,19 +41,7 @@ public final class CACredentialsFactory {
         // Create self-signed and return
         return new AuthorityCredentials(
                 builder.build(CryptoUtils.createDefaultCASigner(keyPair.getPrivate())),
-                toPrivateKeyInfo(keyPair.getPrivate()));
-    }
-
-    private static PrivateKeyInfo toPrivateKeyInfo(final AsymmetricKeyParameter rsaPrivateKey) throws IOException {
-        try {
-            final RSAPrivateCrtKeyParameters pvk = (RSAPrivateCrtKeyParameters) rsaPrivateKey;
-            return new PrivateKeyInfo(
-                    new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption),
-                    new RSAPrivateKey(pvk.getModulus(), pvk.getPublicExponent(), pvk.getExponent(),
-                            pvk.getP(), pvk.getQ(), pvk.getDP(), pvk.getDQ(), pvk.getQInv()));
-        } catch (final IOException e) {
-            throw new IOException("Unexpected error while generating PrivateKeyInfo structure");
-        }
+                CredentialsStoreUtils.toPrivateKeyInfo(keyPair.getPrivate()));
     }
 
 }

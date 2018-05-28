@@ -20,10 +20,7 @@ import io.github.lczx.aml.AMLContext;
 import io.github.lczx.aml.hook.AMLModule;
 import io.github.lczx.aml.hook.AMLTunnelModule;
 import io.github.lczx.aml.hook.ModuleParameters;
-import io.github.lczx.aml.modules.tls.cert.CredentialsStoreUtils;
-import io.github.lczx.aml.modules.tls.cert.ProxyCertificateBuilder;
-import io.github.lczx.aml.modules.tls.cert.ProxyCertificateCache;
-import io.github.lczx.aml.modules.tls.cert.ProxyCertificateProvider;
+import io.github.lczx.aml.modules.tls.cert.*;
 import io.github.lczx.aml.tunnel.network.tcp.TcpCloseConnectionEvent;
 import io.github.lczx.aml.tunnel.network.tcp.TcpNewConnectionEvent;
 import org.spongycastle.crypto.util.PrivateKeyFactory;
@@ -50,9 +47,9 @@ public class TlsProxy implements AMLTunnelModule {
             throw new IllegalArgumentException("Module initialization failed, no CA credentials provided");
 
         try {
-            certificateProvider = new ProxyCertificateCache(new ProxyCertificateBuilder(
+            certificateProvider = new ProxyCertificateBuilder(
                     CredentialsStoreUtils.parseX509CertificateDER(certBytes),
-                    PrivateKeyFactory.createKey(CredentialsStoreUtils.parsePKCS8PrivateKeyDER(keyBytes))));
+                    PrivateKeyFactory.createKey(CredentialsStoreUtils.parsePKCS8PrivateKeyDER(keyBytes)));
         } catch (final IOException e) {
             throw new RuntimeException("Malformed credentials parameter", e);
         }
@@ -61,7 +58,9 @@ public class TlsProxy implements AMLTunnelModule {
     @Override
     public void initialize(final AMLContext amlContext) {
         final RouteTable proxyRoutes = new RouteTable(amlContext);
-        serverRunnable = new ProxyServerLoop(amlContext, proxyRoutes, certificateProvider);
+        final ProxyCertificateProvider cachedCertProvider =
+                new ProxyCertificateCache(certificateProvider, new CacheFileCredentialsStore(amlContext));
+        serverRunnable = new ProxyServerLoop(amlContext, proxyRoutes, cachedCertProvider);
         serverThread = new Thread(serverRunnable, "pxy_server");
 
         amlContext.getEventDispatcher().addEventListener(new TcpRedirectHook(proxyRoutes, serverRunnable),
