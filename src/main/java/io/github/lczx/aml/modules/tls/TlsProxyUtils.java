@@ -25,11 +25,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Hashtable;
 
-public final class TlsProxyUtils {
+/* package */ final class TlsProxyUtils {
 
     private TlsProxyUtils() { }
 
-    public static byte[] readAll(final InputStream inputStream) throws IOException {
+    /* package */ static byte[] readAll(final InputStream inputStream) throws IOException {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         int nRead;
         byte[] buf = new byte[1024];
@@ -38,7 +38,7 @@ public final class TlsProxyUtils {
         return out.toByteArray();
     }
 
-    public static String getServerName(final Hashtable clientExtensions) throws IOException {
+    /* package */ static String getServerName(final Hashtable clientExtensions) throws IOException {
         final byte[] sni = (byte[]) clientExtensions.get(ExtensionType.server_name);
         if (sni == null) return null;
 
@@ -50,12 +50,12 @@ public final class TlsProxyUtils {
         }
     }
 
-    public static String getNextProtocolName(final Hashtable serverExtensions) throws IOException {
+    /* package */ static String getNextProtocolName(final Hashtable serverExtensions) throws IOException {
         final byte[] alpn = (byte[]) serverExtensions.get(ExtensionType.application_layer_protocol_negotiation);
         if (alpn == null) return null;
 
         final ByteArrayInputStream in = new ByteArrayInputStream(alpn);
-        /*int alpnLen =*/ TlsUtils.readUint16(in);
+        TlsUtils.readUint16(in); // <-- whole ALPN extension length
         final int alpnStrLen = TlsUtils.readUint8(in);
         return new String(TlsUtils.readFully(alpnStrLen, in), StandardCharsets.UTF_8);
     }
