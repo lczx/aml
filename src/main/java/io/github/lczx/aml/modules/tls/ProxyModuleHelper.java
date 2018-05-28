@@ -18,20 +18,13 @@ package io.github.lczx.aml.modules.tls;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.security.KeyChain;
+import io.github.lczx.aml.modules.tls.cert.AuthorityCredentials;
 import io.github.lczx.aml.modules.tls.cert.CACredentialsFactory;
 import io.github.lczx.aml.modules.tls.cert.CredentialsStoreUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.spongycastle.asn1.pkcs.PrivateKeyInfo;
-import org.spongycastle.asn1.pkcs.RSAPrivateKey;
-import org.spongycastle.asn1.x509.AlgorithmIdentifier;
-import org.spongycastle.cert.X509CertificateHolder;
-import org.spongycastle.crypto.params.AsymmetricKeyParameter;
-import org.spongycastle.crypto.params.RSAPrivateCrtKeyParameters;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -53,13 +46,12 @@ public final class ProxyModuleHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyModuleHelper.class);
 
-    private static PrivateKeyInfo caPrivateKey;
-    private static X509CertificateHolder caCertificate;
+    private static AuthorityCredentials caCredentials;
 
     private ProxyModuleHelper() { }
 
     public static boolean hasLoadedCredentials() {
-        return caPrivateKey != null && caCertificate != null;
+        return caCredentials != null;
     }
 
     public static boolean hasStoredCredentials(final Context context) {
@@ -68,15 +60,13 @@ public final class ProxyModuleHelper {
     }
 
     public static void loadCredentials(final Context context) throws IOException {
-        FileInputStream in;
-
-        in = new FileInputStream(new File(context.getFilesDir(), CA_PRIVATE_KEY_LOCATION));
-        caPrivateKey = CredentialsStoreUtils.parsePKCS8PrivateKeyDER(TlsProxyUtils.readAll(in));
-        in.close();
-
-        in = new FileInputStream(new File(context.getFilesDir(), CA_CERTIFICATE_LOCATION));
-        caCertificate = CredentialsStoreUtils.parseX509CertificateDER(TlsProxyUtils.readAll(in));
-        in.close();
+        final FileInputStream in1 = new FileInputStream(new File(context.getFilesDir(), CA_CERTIFICATE_LOCATION));
+        final FileInputStream in2 = new FileInputStream(new File(context.getFilesDir(), CA_PRIVATE_KEY_LOCATION));
+        caCredentials = new AuthorityCredentials(
+                CredentialsStoreUtils.parseX509CertificateDER(TlsProxyUtils.readAll(in1)),
+                CredentialsStoreUtils.parsePKCS8PrivateKeyDER(TlsProxyUtils.readAll(in2)));
+        in1.close();
+        in2.close();
     }
 
     public static void storeCredentials(final Context context) throws IOException {
@@ -87,14 +77,14 @@ public final class ProxyModuleHelper {
         pvkFile.getParentFile().mkdirs();
         pvkFile.createNewFile();
         out = new FileOutputStream(pvkFile);
-        out.write(CredentialsStoreUtils.dumpPKCS8PrivateKeyDER(caPrivateKey));
+        out.write(CredentialsStoreUtils.dumpPKCS8PrivateKeyDER(caCredentials.privateKey));
         out.close();
 
         final File crtFile = new File(context.getFilesDir(), CA_CERTIFICATE_LOCATION);
         crtFile.getParentFile().mkdirs();
         crtFile.createNewFile();
         out = new FileOutputStream(crtFile);
-        out.write(CredentialsStoreUtils.dumpX509CertificateDer(caCertificate));
+        out.write(CredentialsStoreUtils.dumpX509CertificateDer(caCredentials.certificate));
         out.close();
     }
 
@@ -110,7 +100,8 @@ public final class ProxyModuleHelper {
                 final String alias = aliases.nextElement();
                 final Certificate installedCert = ks.getCertificate(alias);
                 if (installedCert instanceof X509Certificate &&
-                        Arrays.equals(((X509Certificate) installedCert).getSignature(), caCertificate.getSignature()))
+                        Arrays.equals(((X509Certificate) installedCert).getSignature(),
+                                caCredentials.certificate.getSignature()))
                     return true;
             }
         } catch (final IOException | GeneralSecurityException e) {
@@ -120,43 +111,28 @@ public final class ProxyModuleHelper {
     }
 
     public static void createNewAuthority(final String distinguishedName) throws IOException {
-        final CACredentialsFactory.AuthorityCredentials ca =
-                CACredentialsFactory.buildLocalCACertificate(distinguishedName);
-        caCertificate = ca.certificate;
-        caPrivateKey = toPrivateKeyInfo(ca.privateKey);
+        caCredentials = CACredentialsFactory.buildLocalCACertificate(distinguishedName);
     }
 
     public static Intent createInstallIntent(final CharSequence alias) throws IOException {
         return KeyChain.createInstallIntent()
                 .putExtra(KeyChain.EXTRA_NAME, alias)
-                .putExtra(KeyChain.EXTRA_CERTIFICATE, CredentialsStoreUtils.dumpX509CertificateDer(caCertificate));
+                .putExtra(KeyChain.EXTRA_CERTIFICATE, CredentialsStoreUtils.dumpX509CertificateDer(caCredentials.certificate));
     }
 
-    public static Bundle createModuleParameters(final AssetManager assetManager) {
+    public static Bundle createModuleParameters() {
         if (!hasLoadedCredentials()) throw new IllegalStateException("No credentials loaded");
 
         try {
             final Bundle params = new Bundle();
             params.putByteArray(TlsProxy.PARAM_CA_CERTIFICATE,
-                    CredentialsStoreUtils.dumpX509CertificateDer(caCertificate));
+                    CredentialsStoreUtils.dumpX509CertificateDer(caCredentials.certificate));
             params.putByteArray(TlsProxy.PARAM_CA_PRIVATE_KEY,
-                    CredentialsStoreUtils.dumpPKCS8PrivateKeyDER(caPrivateKey));
+                    CredentialsStoreUtils.dumpPKCS8PrivateKeyDER(caCredentials.privateKey));
             return params;
         } catch (final IOException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    private static PrivateKeyInfo toPrivateKeyInfo(final AsymmetricKeyParameter rsaPrivateKey) throws IOException {
-        try {
-            final RSAPrivateCrtKeyParameters pvk = (RSAPrivateCrtKeyParameters) rsaPrivateKey;
-            return new PrivateKeyInfo(
-                    new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption),
-                    new RSAPrivateKey(pvk.getModulus(), pvk.getPublicExponent(), pvk.getExponent(),
-                            pvk.getP(), pvk.getQ(), pvk.getDP(), pvk.getDQ(), pvk.getQInv()));
-        } catch (final IOException e) {
-            throw new IOException("Unexpected error while generating PrivateKeyInfo structure");
         }
     }
 
